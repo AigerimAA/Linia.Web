@@ -14,6 +14,7 @@ export const useCanvas = (
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
 
+  // Refs для стабильного доступа к значениям в обработчиках событий
   const toolRef = useRef(selectedTool);
   const colorRef = useRef(selectedColor);
   const strokeRef = useRef(strokeWidth);
@@ -22,6 +23,7 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
+  // Инициализация Canvas
   useEffect(() => {
     if (isInitializedRef.current) return;
 
@@ -45,19 +47,19 @@ export const useCanvas = (
       isInitializedRef.current = true;
 
       const canvas = new fabric.Canvas(canvasElement, {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      backgroundColor: '#ffffff',
-      selection: !readOnly,
-      preserveObjectStacking: true,
-      isDrawingMode: true, 
-    });
-
-    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-    canvas.freeDrawingBrush.width = 2; 
-    canvas.freeDrawingBrush.color = '#000000';
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: '#ffffff',
+        selection: !readOnly,
+        preserveObjectStacking: true,
+      });
 
       canvasRef.current = canvas;
+
+      // 👇 Инициализируем кисть сразу, чтобы Pen работал с первого клика
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      canvas.freeDrawingBrush.width = 2;
+      canvas.freeDrawingBrush.color = '#000000';
 
       let panning = false;
       let lastX = 0;
@@ -80,19 +82,18 @@ export const useCanvas = (
       const handleObjectCreation = (obj: any) => {
         obj.set({
           selectable: false,
-          evented: false,
+          evented: false, // 👈 Важно для ластика: если false, ластик не найдет объект
           hoverCursor: 'default',
-          hasControls: false,   
-          hasBorders: false     
+          hasControls: false,
+          hasBorders: false
         });
         
         const backendType = getBackendType(obj.type);
         console.log(`📤 Sending ${backendType} to backend...`);
         onElementAdded(obj, backendType);
-        
-        canvas.requestRenderAll();
       };
 
+      // Zoom
       canvas.on('mouse:wheel', (opt: any) => {
         const delta = opt.e.deltaY;
         let newZoom = canvas.getZoom();
@@ -103,15 +104,15 @@ export const useCanvas = (
         setZoom(newZoom);
         opt.e.preventDefault();
         opt.e.stopPropagation();
-        
-        canvas.requestRenderAll();
       });
 
+      // Mouse Down
       canvas.on('mouse:down', (opt: any) => {
         const tool = toolRef.current;
         const color = colorRef.current;
         const stroke = strokeRef.current;
 
+        // Pan (средняя кнопка или Shift)
         if (opt.e.button === 1 || opt.e.shiftKey) {
           panning = true;
           lastX = opt.e.clientX;
@@ -123,31 +124,30 @@ export const useCanvas = (
 
         if (readOnly) return;
 
+        // 🧹 ЛАСТИК: Исправленная логика
         if (tool === 'eraser') {
-          canvas.getObjects().forEach((o: any) => {
-            o.set({ selectable: true, evented: true });
-          });
-          canvas.renderAll();
+          // 👇 Ищем цель, игнорируя проверку selectable (второй аргумент false)
+          const target = canvas.findTarget(opt.e, false); 
 
-          const target = canvas.findTarget(opt.e);
-
-          canvas.getObjects().forEach((o: any) => {
-            o.set({ selectable: false, evented: false });
-          });
-          canvas.renderAll();
-
-          if (target && target.type !== 'activeSelection') {
+          if (target) {
+            console.log("🗑️ Removing object:", target);
+            const elementId = target.elementId;
             canvas.remove(target);
             canvas.renderAll();
+            
+            // Здесь можно вызвать удаление на сервере, если нужно
+            // if (elementId) deleteElement(elementId);
           }
           return;
         }
 
+        // Рисование фигур
         if (tool !== 'pen') {
           const pointer = canvas.getPointer(opt.e);
           isDrawing = true;
           startPoint = { x: pointer.x, y: pointer.y };
 
+          // Общие настройки для всех фигур
           const commonProps = {
             fill: 'transparent', 
             stroke: color, 
@@ -175,13 +175,14 @@ export const useCanvas = (
               hasControls: false, hasBorders: false
             });
           } else if (tool === 'text') {
-            const text = new fabric.IText('Text', {
+            const text = new fabric.IText('', { // Пустая строка
               left: pointer.x, top: pointer.y, fontSize: 24, fill: color, selectable: true
             });
             canvas.add(text);
             canvas.setActiveObject(text);
             text.enterEditing();
-            text.selectAll();
+            text.selectAll(); // Выделяем всё, чтобы пользователь сразу писал
+            
             text.on('editing:exited', () => handleObjectCreation(text));
             isDrawing = false;
             return;
@@ -191,6 +192,7 @@ export const useCanvas = (
         }
       });
 
+      // Mouse Move
       canvas.on('mouse:move', (opt: any) => {
         if (panning && opt.e) {
           const dx = opt.e.clientX - lastX;
@@ -226,6 +228,7 @@ export const useCanvas = (
         canvas.renderAll();
       });
 
+      // Mouse Up
       canvas.on('mouse:up', () => {
         if (panning) {
           panning = false;
@@ -239,6 +242,7 @@ export const useCanvas = (
         isDrawing = false;
       });
 
+      // Path Created (для pen)
       canvas.on('path:created', (opt: any) => {
         if (opt.path) handleObjectCreation(opt.path);
       });
@@ -261,26 +265,28 @@ export const useCanvas = (
     tryInit();
   }, [onElementAdded, readOnly]);
 
+  // 🔑 КЛЮЧЕВОЙ ЭФФЕКТ: Управление режимом рисования и толщиной
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
 
+    // Режим рисования кистью ВКЛ только для pen
     canvas.isDrawingMode = (selectedTool === 'pen');
-
-    if (selectedTool === 'pen') {
-      canvas.selection = false;
-      canvas.defaultCursor = 'crosshair';
-      const brush = new fabric.PencilBrush(canvas);
-      brush.width = strokeWidth;
-      brush.color = selectedColor;
-      canvas.freeDrawingBrush = brush;
-    } else {
-      canvas.isDrawingMode = false;
-      canvas.selection = false;
-      canvas.defaultCursor = selectedTool === 'eraser' ? 'cell' : 'crosshair';
+    
+    if (canvas.isDrawingMode) {
+      // Настраиваем существующую кисть, а не создаем новую
+      if (!canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      }
+      canvas.freeDrawingBrush.width = Number(strokeWidth); // 👈 Толщина линий
+      canvas.freeDrawingBrush.color = selectedColor;       // 👈 Цвет линий
     }
+    
+    // Для всех остальных инструментов — ВЫКЛ
+    canvas.requestRenderAll();
   }, [selectedTool, selectedColor, strokeWidth]);
 
+  // Загрузка элементов из истории
   const loadElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -291,16 +297,11 @@ export const useCanvas = (
     const objectsToLoad: any[] = [];
     elements.forEach(el => {
       try {
-        let parsedJsonData = el.jsonData;
+        let parsedData = el.jsonData;
         if (typeof el.jsonData === 'string') {
-          try {
-            parsedJsonData = JSON.parse(el.jsonData);
-          } catch (e) {
-            console.error('Failed to parse jsonData:', e);
-            return;
-          }
+          parsedData = JSON.parse(el.jsonData);
         }
-        objectsToLoad.push(parsedJsonData);
+        objectsToLoad.push(parsedData);
       } catch (e) {
         console.error('Failed to parse element JSON', e);
       }
@@ -319,12 +320,14 @@ export const useCanvas = (
           if (elements[index]?.id) obj.elementId = elements[index].id;
           canvas.add(obj);
         });
-        canvas.requestRenderAll(); 
+        
+        // 👇 ГЛАВНОЕ: Принудительная перерисовка после загрузки всех объектов
+        canvas.renderAll(); 
         canvas.calcOffset();
         console.log(`✅ Canvas rendered with ${objects.length} objects`);
       }, 'fabric');
     } else {
-      canvas.requestRenderAll();
+      canvas.renderAll();
     }
   }, []);
 
