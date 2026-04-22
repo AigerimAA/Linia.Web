@@ -6,25 +6,26 @@ interface CursorOverlayProps {
   zoom: number;
 }
 
-export const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors }) => {
+export const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, zoom  }) => {
   const colors = [
     '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE'
   ];
 
   return (
-    <>
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
       {cursors.map((cursor) => {
         const colorIndex = cursor.nickname.length % colors.length;
         const cursorColor = colors[colorIndex];
-
+        
         return (
           <div
             key={cursor.nickname}
-            className="fixed pointer-events-none z-50 transition-transform duration-100"
+            className="absolute transition-transform duration-100 ease-linear"
             style={{
-              left: cursor.x,
-              top: cursor.y,
-              transform: 'translate(-50%, -50%)'
+              left: cursor.x * zoom,
+              top: cursor.y * zoom,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -49,6 +50,6 @@ export const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors }) => {
           </div>
         );
       })}
-    </>
+    </div>
   );
 };

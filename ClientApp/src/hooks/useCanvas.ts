@@ -22,12 +22,11 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
-  // 👇 ЛОГИКА ПОИСКА CANVAS С ПОВТОРНЫМИ ПОПЫТКАМИ
   useEffect(() => {
     if (isInitializedRef.current) return;
 
     let attempts = 0;
-    const maxAttempts = 10; // Пробуем 10 раз с интервалом 100мс
+    const maxAttempts = 10;
 
     const tryInit = () => {
       const canvasElement = document.getElementById('drawing-canvas');
@@ -35,7 +34,6 @@ export const useCanvas = (
       if (!canvasElement) {
         attempts++;
         if (attempts < maxAttempts) {
-          console.log(`⏳ Waiting for canvas... Attempt ${attempts}/${maxAttempts}`);
           setTimeout(tryInit, 100);
         } else {
           console.error('❌ Failed to find canvas after max attempts!');
@@ -43,16 +41,21 @@ export const useCanvas = (
         return;
       }
 
-      // ✅ CANVAS НАЙДЕН! Инициализируем Fabric
       console.log('🎨 Initializing Fabric Canvas...');
       isInitializedRef.current = true;
 
       const canvas = new fabric.Canvas(canvasElement, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        backgroundColor: '#ffffff',
-        selection: !readOnly,
-      });
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundColor: '#ffffff',
+      selection: !readOnly,
+      preserveObjectStacking: true,
+      isDrawingMode: true, 
+    });
+
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.width = 2; 
+    canvas.freeDrawingBrush.color = '#000000';
 
       canvasRef.current = canvas;
 
@@ -78,12 +81,16 @@ export const useCanvas = (
         obj.set({
           selectable: false,
           evented: false,
-          hoverCursor: 'default'
+          hoverCursor: 'default',
+          hasControls: false,   
+          hasBorders: false     
         });
         
         const backendType = getBackendType(obj.type);
         console.log(`📤 Sending ${backendType} to backend...`);
         onElementAdded(obj, backendType);
+        
+        canvas.requestRenderAll();
       };
 
       canvas.on('mouse:wheel', (opt: any) => {
@@ -96,6 +103,8 @@ export const useCanvas = (
         setZoom(newZoom);
         opt.e.preventDefault();
         opt.e.stopPropagation();
+        
+        canvas.requestRenderAll();
       });
 
       canvas.on('mouse:down', (opt: any) => {
@@ -115,7 +124,18 @@ export const useCanvas = (
         if (readOnly) return;
 
         if (tool === 'eraser') {
+          canvas.getObjects().forEach((o: any) => {
+            o.set({ selectable: true, evented: true });
+          });
+          canvas.renderAll();
+
           const target = canvas.findTarget(opt.e);
+
+          canvas.getObjects().forEach((o: any) => {
+            o.set({ selectable: false, evented: false });
+          });
+          canvas.renderAll();
+
           if (target && target.type !== 'activeSelection') {
             canvas.remove(target);
             canvas.renderAll();
@@ -128,22 +148,31 @@ export const useCanvas = (
           isDrawing = true;
           startPoint = { x: pointer.x, y: pointer.y };
 
+          const commonProps = {
+            fill: 'transparent', 
+            stroke: color, 
+            strokeWidth: stroke,
+            selectable: false, 
+            evented: false,
+            hasControls: false,
+            hasBorders: false
+          };
+
           if (tool === 'rectangle') {
             currentShape = new fabric.Rect({
-              left: pointer.x, top: pointer.y, width: 0, height: 0,
-              fill: 'transparent', stroke: color, strokeWidth: stroke,
-              selectable: false, evented: false
+              ...commonProps,
+              left: pointer.x, top: pointer.y, width: 0, height: 0
             });
           } else if (tool === 'circle') {
             currentShape = new fabric.Ellipse({
+              ...commonProps,
               left: pointer.x, top: pointer.y, rx: 0, ry: 0,
-              fill: 'transparent', stroke: color, strokeWidth: stroke,
-              selectable: false, evented: false,
               originX: 'center', originY: 'center'
             });
           } else if (tool === 'line') {
             currentShape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-              stroke: color, strokeWidth: stroke, selectable: false, evented: false
+              stroke: color, strokeWidth: stroke, selectable: false, evented: false,
+              hasControls: false, hasBorders: false
             });
           } else if (tool === 'text') {
             const text = new fabric.IText('Text', {
@@ -152,6 +181,7 @@ export const useCanvas = (
             canvas.add(text);
             canvas.setActiveObject(text);
             text.enterEditing();
+            text.selectAll();
             text.on('editing:exited', () => handleObjectCreation(text));
             isDrawing = false;
             return;
@@ -210,10 +240,7 @@ export const useCanvas = (
       });
 
       canvas.on('path:created', (opt: any) => {
-        console.log('✍️ Path created event fired!', opt.path); 
-        if (opt.path) {
-           handleObjectCreation(opt.path);
-        }
+        if (opt.path) handleObjectCreation(opt.path);
       });
 
       const handleResize = () => {
@@ -238,8 +265,9 @@ export const useCanvas = (
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
 
+    canvas.isDrawingMode = (selectedTool === 'pen');
+
     if (selectedTool === 'pen') {
-      canvas.isDrawingMode = true;
       canvas.selection = false;
       canvas.defaultCursor = 'crosshair';
       const brush = new fabric.PencilBrush(canvas);
@@ -256,13 +284,23 @@ export const useCanvas = (
   const loadElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
+    
     canvas.clear();
     canvas.backgroundColor = '#ffffff';
 
     const objectsToLoad: any[] = [];
     elements.forEach(el => {
       try {
-        objectsToLoad.push(JSON.parse(el.jsonData));
+        let parsedJsonData = el.jsonData;
+        if (typeof el.jsonData === 'string') {
+          try {
+            parsedJsonData = JSON.parse(el.jsonData);
+          } catch (e) {
+            console.error('Failed to parse jsonData:', e);
+            return;
+          }
+        }
+        objectsToLoad.push(parsedJsonData);
       } catch (e) {
         console.error('Failed to parse element JSON', e);
       }
@@ -271,12 +309,22 @@ export const useCanvas = (
     if (objectsToLoad.length > 0) {
       fabric.util.enlivenObjects(objectsToLoad, (objects: any[]) => {
         objects.forEach((obj, index) => {
-          obj.set({ selectable: false, evented: false, hoverCursor: 'default' });
+          obj.set({ 
+            selectable: false, 
+            evented: false, 
+            hoverCursor: 'default',
+            hasControls: false,
+            hasBorders: false
+          });
           if (elements[index]?.id) obj.elementId = elements[index].id;
           canvas.add(obj);
         });
-        canvas.renderAll();
-      });
+        canvas.requestRenderAll(); 
+        canvas.calcOffset();
+        console.log(`✅ Canvas rendered with ${objects.length} objects`);
+      }, 'fabric');
+    } else {
+      canvas.requestRenderAll();
     }
   }, []);
 

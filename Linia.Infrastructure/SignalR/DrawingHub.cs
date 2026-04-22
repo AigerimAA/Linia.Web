@@ -44,7 +44,22 @@ namespace Linia.Infrastructure.SignalR
             try
             {
                 var elementId = await _mediator.Send(command);
+
+                var elementDto = new BoardElementDto
+                {
+                    Id = elementId,
+                    Type = request.Type,
+                    JsonData = request.JsonData,
+                    AuthorNickname = nickname,
+                    CreatedAt = DateTime.UtcNow,
+                    PageId = request.PageId,
+                    ZIndex = request.ZIndex
+                };
+
                 _logger.LogInformation("Element {ElementId} drawn by {User}", elementId, nickname);
+
+                await Clients.Group(request.BoardId.ToString()).ReceiveElement(elementDto);
+
                 await Clients.Caller.ElementDrawn(elementId);
             }
             catch (Exception ex) when (ex is ForbiddenException or DomainException)

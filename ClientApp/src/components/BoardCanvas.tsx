@@ -20,18 +20,15 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   onToggleTheme,
   onLeave,
 }) => {
-  // Используем useRef, чтобы хранить актуальный ID страницы без зависимостей в useCallback
   const currentPageIdRef = useRef<string | null>(null);
 
   const { isConnected, elements, cursors, currentPageId, isLoading, sendElement, sendCursor } = useSignalR(boardId, nickname);
 
-  // Синхронизируем ref со стейтом из хука
   useEffect(() => {
     currentPageIdRef.current = currentPageId;
     console.log('📍 CurrentPageId updated in Ref:', currentPageId);
   }, [currentPageId]);
 
-  // Обёртка для отправки элемента на сервер
   const handleElementAdded = useCallback((fabricObj: any, backendType: string) => {
     const currentId = currentPageIdRef.current;
     
@@ -42,7 +39,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
 
     console.log('🚀 Sending to backend...', { type: backendType, pageId: currentId });
     sendElement(fabricObj, currentId, backendType);
-  }, [sendElement]); // Убрали currentPageId из зависимостей, используем ref
+  }, [sendElement]); 
 
   const {
     selectedTool, setSelectedTool,
@@ -54,17 +51,14 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     exportToJPEG,
   } = useCanvas(handleElementAdded, false);
 
-  // Загрузка элементов при получении из SignalR
-  useEffect(() => {
+  React.useEffect(() => {
     if (elements.length > 0) {
       loadElements(elements);
     }
   }, [elements, loadElements]);
 
-  // Отправка курсора
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // Используем ref здесь тоже, чтобы не терять соединение при частых обновлениях
       if (currentPageIdRef.current && isConnected) {
         sendCursor(e.clientX, e.clientY);
       }
@@ -81,7 +75,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     link.click();
   };
 
-  // 👇 ВАЖНО: Не рендерим холст, пока не загрузились данные и нет ID страницы
   if (isLoading || !currentPageId) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -96,7 +89,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
 
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {/* Canvas должен быть первым */}
       <canvas
         id="drawing-canvas"
         style={{ display: 'block', position: 'fixed', top: 0, left: 0, zIndex: 1 }}

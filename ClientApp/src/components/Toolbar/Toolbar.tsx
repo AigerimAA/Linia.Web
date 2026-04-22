@@ -9,8 +9,6 @@ import {
   Minus,
   Download,
   Trash2,
-  Sun,
-  Moon
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 
@@ -45,8 +43,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onStrokeWidthChange,
   onClear,
   onExport,
-  theme,
-  onThemeToggle,
 }) => {
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
@@ -102,16 +98,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           title="Export as JPEG"
         >
           <Download size={20} />
-        </button>
-
-        <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-        <button
-          onClick={onThemeToggle}
-          className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-          title={theme === 'light' ? 'Dark mode' : 'Light mode'}
-        >
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
         </button>
       </div>
     </div>

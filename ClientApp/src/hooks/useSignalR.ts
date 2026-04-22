@@ -66,7 +66,11 @@ export const useSignalR = (boardId: string | null, nickname: string) => {
              console.log('User left:', userNickname);
           });
           connection.on('CommandFailed', (errorMessage: string) => {
-          console.error('❌ SERVER ERROR:', errorMessage);
+            console.error('❌ Server Error (CamelCase):', errorMessage);
+          });
+
+          connection.on('commandFailed', (errorMessage: string) => {
+            console.error('❌ Server Error (camelCase):', errorMessage);
           });
           connection.on('ElementDrawn', (elementId: string) => {
             console.log('✅ Element saved on server with ID:', elementId);
