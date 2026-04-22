@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/tests/" />
+  <Folder Name="/Элементы решения/">
+    <File Path=".gitignore" />
+  </Folder>
+  <Project Path="Linia.Application/Linia.Application.csproj" />
+  <Project Path="Linia.Domain/Linia.Domain.csproj" />
+  <Project Path="Linia.Infrastructure/Linia.Infrastructure.csproj" />
+  <Project Path="Linia.Web/Linia.API.csproj" />
+</Solution>

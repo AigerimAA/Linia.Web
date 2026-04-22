@@ -1,0 +1,68 @@
+using Linia.API.Middleware;
+using Linia.Application;
+using Linia.Infrastructure;
+using Linia.Infrastructure.SignalR;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Linia.Web
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("ReactApp", policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
+                });
+            });
+
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 10 * 1024 * 1024;
+            });
+
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
+
+            builder.Services.AddApplication();
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            builder.Services.AddInfrastructure(connectionString, builder.Environment.IsDevelopment());
+
+            var app = builder.Build();
+
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+            app.UseRouting();
+            app.UseCors("ReactApp");
+            app.UseHttpsRedirection();
+            app.UseAuthorization();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            app.MapControllers();
+            app.MapHub<DrawingHub>("/drawingHub")
+                .RequireCors("ReactApp");
+
+            app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+            app.Run();
+        }
+    }
+}
