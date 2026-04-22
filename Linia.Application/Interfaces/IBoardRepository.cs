@@ -1,4 +1,5 @@
 ﻿using Linia.Domain.Aggregates;
+using Linia.Domain.Entities;
 using Linia.Domain.Enums;
 
 namespace Linia.Application.Interfaces
@@ -13,5 +14,7 @@ namespace Linia.Application.Interfaces
         Task DeleteAsync(Guid id, CancellationToken ct = default);
         Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
         Task AddMemberAsync(Guid boardId, string nickname, UserRole role, CancellationToken ct = default);
+        Task SaveMemberAsync(Guid boardId, string nickname, UserRole role, CancellationToken ct = default);
+        Task AddElementAsync(Element element, CancellationToken ct = default);
     }
 }

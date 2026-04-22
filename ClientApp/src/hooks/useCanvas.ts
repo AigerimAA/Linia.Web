@@ -7,14 +7,13 @@ export const useCanvas = (
   readOnly: boolean = false
 ) => {
   const canvasRef = useRef<any>(null);
-  const isInitializedRef = useRef(false); // ✅ Защита от повторной инициализации
+  const isInitializedRef = useRef(false);
   
   const [selectedTool, setSelectedTool] = useState<string>('pen');
   const [selectedColor, setSelectedColor] = useState<string>('#000000');
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
 
-  // Refs для стабильного доступа к значениям в обработчиках
   const toolRef = useRef(selectedTool);
   const colorRef = useRef(selectedColor);
   const strokeRef = useRef(strokeWidth);
@@ -23,226 +22,218 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
+  // 👇 ЛОГИКА ПОИСКА CANVAS С ПОВТОРНЫМИ ПОПЫТКАМИ
   useEffect(() => {
-    // ✅ Если уже инициализирован — выходим
     if (isInitializedRef.current) return;
 
-    const canvasElement = document.getElementById('drawing-canvas');
-    if (!canvasElement) {
-      console.error('❌ Canvas element not found!');
-      return;
-    }
+    let attempts = 0;
+    const maxAttempts = 10; // Пробуем 10 раз с интервалом 100мс
 
-    console.log('🎨 Initializing Fabric Canvas...');
-    isInitializedRef.current = true;
-
-    const canvas = new fabric.Canvas(canvasElement, {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      backgroundColor: '#ffffff',
-      selection: !readOnly,
-    });
-
-    canvasRef.current = canvas;
-
-    let panning = false;
-    let lastX = 0;
-    let lastY = 0;
-    let isDrawing = false;
-    let currentShape: any = null;
-    let startPoint = { x: 0, y: 0 };
-
-    // 🔑 МАППИНГ ТИПОВ: Fabric → Backend
-    const getBackendType = (fabricType: string) => {
-      const map: Record<string, string> = {
-        'ellipse': 'Circle',
-        'rect': 'Rectangle',
-        'line': 'Line',
-        'path': 'Freehand',
-        'i-text': 'Text',
-      };
-      return map[fabricType] || fabricType;
-    };
-
-    // 🔑 ОТПРАВКА ОБЪЕКТА НА СЕРВЕР
-    const handleObjectCreation = (obj: any) => {
-      obj.set({
-        selectable: false,
-        evented: false, // 👈 Критично: чтобы объект не перехватывал клики
-        hoverCursor: 'default'
-      });
+    const tryInit = () => {
+      const canvasElement = document.getElementById('drawing-canvas');
       
-      const backendType = getBackendType(obj.type);
-      console.log(`📤 Sending ${backendType} to backend...`);
-      onElementAdded(obj, backendType);
-    };
-
-    // Zoom
-    canvas.on('mouse:wheel', (opt: any) => {
-      const delta = opt.e.deltaY;
-      let newZoom = canvas.getZoom();
-      newZoom *= 0.999 ** delta;
-      if (newZoom > 20) newZoom = 20;
-      if (newZoom < 0.1) newZoom = 0.1;
-      canvas.zoomToPoint(new fabric.Point(opt.e.offsetX, opt.e.offsetY), newZoom);
-      setZoom(newZoom);
-      opt.e.preventDefault();
-      opt.e.stopPropagation();
-    });
-
-    // Mouse Down
-    canvas.on('mouse:down', (opt: any) => {
-      const tool = toolRef.current;
-      const color = colorRef.current;
-      const stroke = strokeRef.current;
-
-      // Pan (средняя кнопка или Shift)
-      if (opt.e.button === 1 || opt.e.shiftKey) {
-        panning = true;
-        lastX = opt.e.clientX;
-        lastY = opt.e.clientY;
-        canvas.selection = false;
-        canvas.isDrawingMode = false;
-        return;
-      }
-
-      if (readOnly) return;
-
-      // 🧹 Ластик
-      if (tool === 'eraser') {
-        canvas.getObjects().forEach((o: any) => {
-          o.set({ selectable: true, evented: true });
-        });
-        canvas.renderAll();
-
-        const target = canvas.findTarget(opt.e);
-
-        canvas.getObjects().forEach((o: any) => {
-          o.set({ selectable: false, evented: false });
-        });
-        canvas.renderAll();
-
-        if (target && target.type !== 'activeSelection') {
-          const elementId = target.elementId;
-          canvas.remove(target);
-          canvas.renderAll();
-          // Удаление на сервере обрабатывается отдельно через deleteElement
+      if (!canvasElement) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          console.log(`⏳ Waiting for canvas... Attempt ${attempts}/${maxAttempts}`);
+          setTimeout(tryInit, 100);
+        } else {
+          console.error('❌ Failed to find canvas after max attempts!');
         }
         return;
       }
 
-      // Рисование фигур
-      if (tool !== 'pen') {
-        const pointer = canvas.getPointer(opt.e);
-        isDrawing = true;
-        startPoint = { x: pointer.x, y: pointer.y };
+      // ✅ CANVAS НАЙДЕН! Инициализируем Fabric
+      console.log('🎨 Initializing Fabric Canvas...');
+      isInitializedRef.current = true;
 
-        if (tool === 'rectangle') {
-          currentShape = new fabric.Rect({
-            left: pointer.x, top: pointer.y, width: 0, height: 0,
-            fill: 'transparent', stroke: color, strokeWidth: stroke,
-            selectable: false, evented: false
-          });
-        } else if (tool === 'circle') {
-          currentShape = new fabric.Ellipse({
-            left: pointer.x, top: pointer.y, rx: 0, ry: 0,
-            fill: 'transparent', stroke: color, strokeWidth: stroke,
-            selectable: false, evented: false,
-            originX: 'center', originY: 'center'
-          });
-        } else if (tool === 'line') {
-          currentShape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-            stroke: color, strokeWidth: stroke, selectable: false, evented: false
-          });
-        } else if (tool === 'text') {
-          const text = new fabric.IText('Text', {
-            left: pointer.x, top: pointer.y, fontSize: 24, fill: color, selectable: true
-          });
-          canvas.add(text);
-          canvas.setActiveObject(text);
-          text.enterEditing();
-          text.on('editing:exited', () => handleObjectCreation(text));
-          isDrawing = false;
+      const canvas = new fabric.Canvas(canvasElement, {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: '#ffffff',
+        selection: !readOnly,
+      });
+
+      canvasRef.current = canvas;
+
+      let panning = false;
+      let lastX = 0;
+      let lastY = 0;
+      let isDrawing = false;
+      let currentShape: any = null;
+      let startPoint = { x: 0, y: 0 };
+
+      const getBackendType = (fabricType: string) => {
+        const map: Record<string, string> = {
+          'ellipse': 'Circle',
+          'rect': 'Rectangle',
+          'line': 'Line',
+          'path': 'Freehand',
+          'i-text': 'Text',
+        };
+        return map[fabricType] || fabricType;
+      };
+
+      const handleObjectCreation = (obj: any) => {
+        obj.set({
+          selectable: false,
+          evented: false,
+          hoverCursor: 'default'
+        });
+        
+        const backendType = getBackendType(obj.type);
+        console.log(`📤 Sending ${backendType} to backend...`);
+        onElementAdded(obj, backendType);
+      };
+
+      canvas.on('mouse:wheel', (opt: any) => {
+        const delta = opt.e.deltaY;
+        let newZoom = canvas.getZoom();
+        newZoom *= 0.999 ** delta;
+        if (newZoom > 20) newZoom = 20;
+        if (newZoom < 0.1) newZoom = 0.1;
+        canvas.zoomToPoint(new fabric.Point(opt.e.offsetX, opt.e.offsetY), newZoom);
+        setZoom(newZoom);
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+      });
+
+      canvas.on('mouse:down', (opt: any) => {
+        const tool = toolRef.current;
+        const color = colorRef.current;
+        const stroke = strokeRef.current;
+
+        if (opt.e.button === 1 || opt.e.shiftKey) {
+          panning = true;
+          lastX = opt.e.clientX;
+          lastY = opt.e.clientY;
+          canvas.selection = false;
+          canvas.isDrawingMode = false;
           return;
         }
 
-        if (currentShape) canvas.add(currentShape);
-      }
-    });
+        if (readOnly) return;
 
-    // Mouse Move
-    canvas.on('mouse:move', (opt: any) => {
-      if (panning && opt.e) {
-        const dx = opt.e.clientX - lastX;
-        const dy = opt.e.clientY - lastY;
-        canvas.relativePan(new fabric.Point(dx, dy));
-        lastX = opt.e.clientX;
-        lastY = opt.e.clientY;
-        return;
-      }
+        if (tool === 'eraser') {
+          const target = canvas.findTarget(opt.e);
+          if (target && target.type !== 'activeSelection') {
+            canvas.remove(target);
+            canvas.renderAll();
+          }
+          return;
+        }
 
-      if (!isDrawing || !currentShape) return;
+        if (tool !== 'pen') {
+          const pointer = canvas.getPointer(opt.e);
+          isDrawing = true;
+          startPoint = { x: pointer.x, y: pointer.y };
 
-      const pointer = canvas.getPointer(opt.e);
-      const tool = toolRef.current;
+          if (tool === 'rectangle') {
+            currentShape = new fabric.Rect({
+              left: pointer.x, top: pointer.y, width: 0, height: 0,
+              fill: 'transparent', stroke: color, strokeWidth: stroke,
+              selectable: false, evented: false
+            });
+          } else if (tool === 'circle') {
+            currentShape = new fabric.Ellipse({
+              left: pointer.x, top: pointer.y, rx: 0, ry: 0,
+              fill: 'transparent', stroke: color, strokeWidth: stroke,
+              selectable: false, evented: false,
+              originX: 'center', originY: 'center'
+            });
+          } else if (tool === 'line') {
+            currentShape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+              stroke: color, strokeWidth: stroke, selectable: false, evented: false
+            });
+          } else if (tool === 'text') {
+            const text = new fabric.IText('Text', {
+              left: pointer.x, top: pointer.y, fontSize: 24, fill: color, selectable: true
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+            text.enterEditing();
+            text.on('editing:exited', () => handleObjectCreation(text));
+            isDrawing = false;
+            return;
+          }
 
-      if (tool === 'rectangle') {
-        currentShape.set({
-          width: Math.abs(pointer.x - startPoint.x),
-          height: Math.abs(pointer.y - startPoint.y),
-          left: Math.min(startPoint.x, pointer.x),
-          top: Math.min(startPoint.y, pointer.y),
-        });
-      } else if (tool === 'circle') {
-        currentShape.set({
-          rx: Math.abs(pointer.x - startPoint.x) / 2,
-          ry: Math.abs(pointer.y - startPoint.y) / 2,
-          left: startPoint.x + (pointer.x - startPoint.x) / 2,
-          top: startPoint.y + (pointer.y - startPoint.y) / 2,
-        });
-      } else if (tool === 'line') {
-        currentShape.set({ x2: pointer.x, y2: pointer.y });
-      }
-      canvas.renderAll();
-    });
+          if (currentShape) canvas.add(currentShape);
+        }
+      });
 
-    // Mouse Up
-    canvas.on('mouse:up', () => {
-      if (panning) {
-        panning = false;
-        canvas.selection = !readOnly;
-        return;
-      }
-      if (isDrawing && currentShape) {
-        handleObjectCreation(currentShape);
-        currentShape = null;
-      }
-      isDrawing = false;
-    });
+      canvas.on('mouse:move', (opt: any) => {
+        if (panning && opt.e) {
+          const dx = opt.e.clientX - lastX;
+          const dy = opt.e.clientY - lastY;
+          canvas.relativePan(new fabric.Point(dx, dy));
+          lastX = opt.e.clientX;
+          lastY = opt.e.clientY;
+          return;
+        }
 
-    // Path Created (для pen)
-    canvas.on('path:created', (opt: any) => {
-      if (opt.path) handleObjectCreation(opt.path);
-    });
+        if (!isDrawing || !currentShape) return;
 
-    // Resize
-    const handleResize = () => {
-      canvas.setDimensions({ width: window.innerWidth, height: window.innerHeight });
-      canvas.renderAll();
+        const pointer = canvas.getPointer(opt.e);
+        const tool = toolRef.current;
+
+        if (tool === 'rectangle') {
+          currentShape.set({
+            width: Math.abs(pointer.x - startPoint.x),
+            height: Math.abs(pointer.y - startPoint.y),
+            left: Math.min(startPoint.x, pointer.x),
+            top: Math.min(startPoint.y, pointer.y),
+          });
+        } else if (tool === 'circle') {
+          currentShape.set({
+            rx: Math.abs(pointer.x - startPoint.x) / 2,
+            ry: Math.abs(pointer.y - startPoint.y) / 2,
+            left: startPoint.x + (pointer.x - startPoint.x) / 2,
+            top: startPoint.y + (pointer.y - startPoint.y) / 2,
+          });
+        } else if (tool === 'line') {
+          currentShape.set({ x2: pointer.x, y2: pointer.y });
+        }
+        canvas.renderAll();
+      });
+
+      canvas.on('mouse:up', () => {
+        if (panning) {
+          panning = false;
+          canvas.selection = !readOnly;
+          return;
+        }
+        if (isDrawing && currentShape) {
+          handleObjectCreation(currentShape);
+          currentShape = null;
+        }
+        isDrawing = false;
+      });
+
+      canvas.on('path:created', (opt: any) => {
+        console.log('✍️ Path created event fired!', opt.path); 
+        if (opt.path) {
+           handleObjectCreation(opt.path);
+        }
+      });
+
+      const handleResize = () => {
+        canvas.setDimensions({ width: window.innerWidth, height: window.innerHeight });
+        canvas.renderAll();
+      };
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (canvasRef.current) {
+          canvasRef.current.dispose();
+        }
+        isInitializedRef.current = false;
+      };
     };
-    window.addEventListener('resize', handleResize);
 
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (canvasRef.current) {
-        canvasRef.current.dispose();
-      }
-      isInitializedRef.current = false;
-    };
+    tryInit();
   }, [onElementAdded, readOnly]);
 
-  // Обновление кисти
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -262,7 +253,6 @@ export const useCanvas = (
     }
   }, [selectedTool, selectedColor, strokeWidth]);
 
-  // Загрузка элементов из истории
   const loadElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;

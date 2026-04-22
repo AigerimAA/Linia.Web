@@ -57,28 +57,36 @@ namespace Linia.Infrastructure.Repositories
                 await _context.SaveChangesAsync(ct);
             }
         }
-        public async Task UpdateAsync(Board board, CancellationToken ct = default)
+        public async Task AddElementAsync(Element element, CancellationToken ct = default)
         {
-            var trackedBoard = _context.ChangeTracker.Entries<Board>()
-                .FirstOrDefault(e => e.Entity.Id == board.Id);
-            if (trackedBoard != null)
-                trackedBoard.State = EntityState.Detached;
-
-            _context.Boards.Update(board);
-
-            foreach (var page in board.Pages)
-            {
-                foreach (var element in page.Elements)
-                {
-                    var elementEntry = _context.Entry(element);
-                    if (elementEntry.State == EntityState.Detached)
-                    {
-                        elementEntry.State = EntityState.Added;
-                    }
-                }
-            }
+            await _context.Set<Element>().AddAsync(element, ct);
             await _context.SaveChangesAsync(ct);
         }
+        public async Task UpdateAsync(Board board, CancellationToken ct = default)
+        {
+            try
+            {
+                await _context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                throw new DomainException("Could not save changes due to a data conflict. Please try again.");
+            }
+        }
+        public async Task SaveMemberAsync(Guid boardId, string nickname, UserRole role, CancellationToken ct = default)
+        {
+            var exists = await _context.Set<Member>()
+                .AnyAsync(m => m.BoardId == boardId &&
+                          m.Nickname.ToLower() == nickname.ToLower(), ct);
+
+            if (!exists)
+            {
+                var member = new Member(boardId, nickname, role);
+                await _context.Set<Member>().AddAsync(member, ct);
+                await _context.SaveChangesAsync(ct);
+            }
+        }
+
         public async Task DeleteAsync(Guid id, CancellationToken ct = default)
         {
             var board = await GetByIdWithPagesAsync(id, ct);
