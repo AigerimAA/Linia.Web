@@ -14,7 +14,6 @@ export const useCanvas = (
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
 
-  // Refs для стабильного доступа к значениям в обработчиках событий
   const toolRef = useRef(selectedTool);
   const colorRef = useRef(selectedColor);
   const strokeRef = useRef(strokeWidth);
@@ -23,7 +22,6 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
-  // Инициализация Canvas
   useEffect(() => {
     if (isInitializedRef.current) return;
 
@@ -56,7 +54,6 @@ export const useCanvas = (
 
       canvasRef.current = canvas;
 
-      // 👇 Инициализируем кисть сразу, чтобы Pen работал с первого клика
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
       canvas.freeDrawingBrush.width = 2;
       canvas.freeDrawingBrush.color = '#000000';
@@ -82,7 +79,7 @@ export const useCanvas = (
       const handleObjectCreation = (obj: any) => {
         obj.set({
           selectable: false,
-          evented: false, // 👈 Важно для ластика: если false, ластик не найдет объект
+          evented: false, 
           hoverCursor: 'default',
           hasControls: false,
           hasBorders: false
@@ -93,7 +90,6 @@ export const useCanvas = (
         onElementAdded(obj, backendType);
       };
 
-      // Zoom
       canvas.on('mouse:wheel', (opt: any) => {
         const delta = opt.e.deltaY;
         let newZoom = canvas.getZoom();
@@ -112,7 +108,6 @@ export const useCanvas = (
         const color = colorRef.current;
         const stroke = strokeRef.current;
 
-        // Pan (средняя кнопка или Shift)
         if (opt.e.button === 1 || opt.e.shiftKey) {
           panning = true;
           lastX = opt.e.clientX;
@@ -124,9 +119,7 @@ export const useCanvas = (
 
         if (readOnly) return;
 
-        // 🧹 ЛАСТИК: Исправленная логика
         if (tool === 'eraser') {
-          // 👇 Ищем цель, игнорируя проверку selectable (второй аргумент false)
           const target = canvas.findTarget(opt.e, false); 
 
           if (target) {
@@ -135,19 +128,15 @@ export const useCanvas = (
             canvas.remove(target);
             canvas.renderAll();
             
-            // Здесь можно вызвать удаление на сервере, если нужно
-            // if (elementId) deleteElement(elementId);
           }
           return;
         }
 
-        // Рисование фигур
         if (tool !== 'pen') {
           const pointer = canvas.getPointer(opt.e);
           isDrawing = true;
           startPoint = { x: pointer.x, y: pointer.y };
 
-          // Общие настройки для всех фигур
           const commonProps = {
             fill: 'transparent', 
             stroke: color, 
@@ -175,13 +164,13 @@ export const useCanvas = (
               hasControls: false, hasBorders: false
             });
           } else if (tool === 'text') {
-            const text = new fabric.IText('', { // Пустая строка
+            const text = new fabric.IText('', {
               left: pointer.x, top: pointer.y, fontSize: 24, fill: color, selectable: true
             });
             canvas.add(text);
             canvas.setActiveObject(text);
             text.enterEditing();
-            text.selectAll(); // Выделяем всё, чтобы пользователь сразу писал
+            text.selectAll(); 
             
             text.on('editing:exited', () => handleObjectCreation(text));
             isDrawing = false;
@@ -192,7 +181,6 @@ export const useCanvas = (
         }
       });
 
-      // Mouse Move
       canvas.on('mouse:move', (opt: any) => {
         if (panning && opt.e) {
           const dx = opt.e.clientX - lastX;
@@ -242,7 +230,6 @@ export const useCanvas = (
         isDrawing = false;
       });
 
-      // Path Created (для pen)
       canvas.on('path:created', (opt: any) => {
         if (opt.path) handleObjectCreation(opt.path);
       });
@@ -265,28 +252,23 @@ export const useCanvas = (
     tryInit();
   }, [onElementAdded, readOnly]);
 
-  // 🔑 КЛЮЧЕВОЙ ЭФФЕКТ: Управление режимом рисования и толщиной
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
 
-    // Режим рисования кистью ВКЛ только для pen
     canvas.isDrawingMode = (selectedTool === 'pen');
     
     if (canvas.isDrawingMode) {
-      // Настраиваем существующую кисть, а не создаем новую
       if (!canvas.freeDrawingBrush) {
         canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
       }
-      canvas.freeDrawingBrush.width = Number(strokeWidth); // 👈 Толщина линий
-      canvas.freeDrawingBrush.color = selectedColor;       // 👈 Цвет линий
+      canvas.freeDrawingBrush.width = Number(strokeWidth); 
+      canvas.freeDrawingBrush.color = selectedColor;       
     }
     
-    // Для всех остальных инструментов — ВЫКЛ
     canvas.requestRenderAll();
   }, [selectedTool, selectedColor, strokeWidth]);
 
-  // Загрузка элементов из истории
   const loadElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -321,7 +303,6 @@ export const useCanvas = (
           canvas.add(obj);
         });
         
-        // 👇 ГЛАВНОЕ: Принудительная перерисовка после загрузки всех объектов
         canvas.renderAll(); 
         canvas.calcOffset();
         console.log(`✅ Canvas rendered with ${objects.length} objects`);
