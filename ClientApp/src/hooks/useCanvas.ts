@@ -8,16 +8,18 @@ export const useCanvas = (
 ) => {
   const canvasRef = useRef<any>(null);
   const isInitializedRef = useRef(false);
-  
+  const onElementAddedRef = useRef(onElementAdded);
+
   const [selectedTool, setSelectedTool] = useState<string>('pen');
   const [selectedColor, setSelectedColor] = useState<string>('#000000');
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
 
-  const toolRef = useRef(selectedTool);
-  const colorRef = useRef(selectedColor);
-  const strokeRef = useRef(strokeWidth);
+  const toolRef = useRef<string>('pen');
+  const colorRef = useRef<string>('#000000');
+  const strokeRef = useRef<number>(2);
 
+  useEffect(() => { onElementAddedRef.current = onElementAdded; }, [onElementAdded]);
   useEffect(() => { toolRef.current = selectedTool; }, [selectedTool]);
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
@@ -26,83 +28,63 @@ export const useCanvas = (
     if (isInitializedRef.current) return;
 
     let attempts = 0;
-    const maxAttempts = 10;
-
     const tryInit = () => {
       const canvasElement = document.getElementById('drawing-canvas');
-      
       if (!canvasElement) {
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(tryInit, 100);
-        } else {
-          console.error('❌ Failed to find canvas after max attempts!');
-        }
+        if (++attempts < 10) setTimeout(tryInit, 100);
         return;
       }
 
-      console.log('🎨 Initializing Fabric Canvas...');
       isInitializedRef.current = true;
+      console.log('🎨 Initializing canvas...');
 
       const canvas = new fabric.Canvas(canvasElement, {
         width: window.innerWidth,
         height: window.innerHeight,
         backgroundColor: '#ffffff',
-        selection: !readOnly,
+        selection: false,
         preserveObjectStacking: true,
       });
 
       canvasRef.current = canvas;
 
-      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-      canvas.freeDrawingBrush.width = 2;
-      canvas.freeDrawingBrush.color = '#000000';
+      const brush = new fabric.PencilBrush(canvas);
+      brush.width = 2;
+      brush.color = '#000000';
+      canvas.freeDrawingBrush = brush;
+      canvas.isDrawingMode = true; 
 
       let panning = false;
-      let lastX = 0;
-      let lastY = 0;
-      let isDrawing = false;
+      let lastX = 0, lastY = 0;
+      let isDrawingShape = false;
       let currentShape: any = null;
       let startPoint = { x: 0, y: 0 };
 
-      const getBackendType = (fabricType: string) => {
-        const map: Record<string, string> = {
-          'ellipse': 'Circle',
-          'rect': 'Rectangle',
-          'line': 'Line',
-          'path': 'Freehand',
-          'i-text': 'Text',
-        };
-        return map[fabricType] || fabricType;
-      };
+      const getBackendType = (type: string) => ({
+        'ellipse': 'Circle', 'rect': 'Rectangle',
+        'line': 'Line', 'path': 'Freehand', 'i-text': 'Text',
+      }[type] || type);
 
       const handleObjectCreation = (obj: any) => {
-        obj.set({
-          selectable: false,
-          evented: false, 
-          hoverCursor: 'default',
-          hasControls: false,
-          hasBorders: false
-        });
-        
+        obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
         const backendType = getBackendType(obj.type);
-        console.log(`📤 Sending ${backendType} to backend...`);
-        onElementAdded(obj, backendType);
+        console.log(`📤 Sending ${backendType}...`);
+        onElementAddedRef.current(obj, backendType); // ← ref!
       };
 
+      canvas.on('path:created', (opt: any) => {
+        if (opt.path) handleObjectCreation(opt.path);
+      });
+
       canvas.on('mouse:wheel', (opt: any) => {
-        const delta = opt.e.deltaY;
-        let newZoom = canvas.getZoom();
-        newZoom *= 0.999 ** delta;
-        if (newZoom > 20) newZoom = 20;
-        if (newZoom < 0.1) newZoom = 0.1;
+        let newZoom = canvas.getZoom() * (0.999 ** opt.e.deltaY);
+        newZoom = Math.min(20, Math.max(0.1, newZoom));
         canvas.zoomToPoint(new fabric.Point(opt.e.offsetX, opt.e.offsetY), newZoom);
         setZoom(newZoom);
         opt.e.preventDefault();
         opt.e.stopPropagation();
       });
 
-      // Mouse Down
       canvas.on('mouse:down', (opt: any) => {
         const tool = toolRef.current;
         const color = colorRef.current;
@@ -112,126 +94,92 @@ export const useCanvas = (
           panning = true;
           lastX = opt.e.clientX;
           lastY = opt.e.clientY;
-          canvas.selection = false;
           canvas.isDrawingMode = false;
           return;
         }
 
         if (readOnly) return;
+        if (tool === 'pen') return; 
+
+        canvas.isDrawingMode = false;
 
         if (tool === 'eraser') {
-          const target = canvas.findTarget(opt.e, false); 
-
-          if (target) {
-            console.log("🗑️ Removing object:", target);
-            const elementId = target.elementId;
-            canvas.remove(target);
-            canvas.renderAll();
-            
+          const pointer = canvas.getPointer(opt.e);
+          const objects = canvas.getObjects();
+          for (let i = objects.length - 1; i >= 0; i--) {
+            const obj = objects[i];
+            obj.evented = true;
+            obj.selectable = true;
+            const contains = obj.containsPoint(pointer);
+            obj.evented = false;
+            obj.selectable = false;
+            if (contains) {
+              canvas.remove(obj);
+              canvas.renderAll();
+              break;
+            }
           }
           return;
         }
 
-        if (tool !== 'pen') {
-          const pointer = canvas.getPointer(opt.e);
-          isDrawing = true;
-          startPoint = { x: pointer.x, y: pointer.y };
+        const pointer = canvas.getPointer(opt.e);
+        isDrawingShape = true;
+        startPoint = { x: pointer.x, y: pointer.y };
 
-          const commonProps = {
-            fill: 'transparent', 
-            stroke: color, 
-            strokeWidth: stroke,
-            selectable: false, 
-            evented: false,
-            hasControls: false,
-            hasBorders: false
-          };
+        const props = { fill: 'transparent', stroke: color, strokeWidth: stroke, selectable: false, evented: false, hasControls: false, hasBorders: false };
 
-          if (tool === 'rectangle') {
-            currentShape = new fabric.Rect({
-              ...commonProps,
-              left: pointer.x, top: pointer.y, width: 0, height: 0
-            });
-          } else if (tool === 'circle') {
-            currentShape = new fabric.Ellipse({
-              ...commonProps,
-              left: pointer.x, top: pointer.y, rx: 0, ry: 0,
-              originX: 'center', originY: 'center'
-            });
-          } else if (tool === 'line') {
-            currentShape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-              stroke: color, strokeWidth: stroke, selectable: false, evented: false,
-              hasControls: false, hasBorders: false
-            });
-          } else if (tool === 'text') {
-            const text = new fabric.IText('', {
-              left: pointer.x, top: pointer.y, fontSize: 24, fill: color, selectable: true
-            });
-            canvas.add(text);
-            canvas.setActiveObject(text);
-            text.enterEditing();
-            text.selectAll(); 
-            
-            text.on('editing:exited', () => handleObjectCreation(text));
-            isDrawing = false;
-            return;
-          }
-
-          if (currentShape) canvas.add(currentShape);
+        if (tool === 'rectangle') {
+          currentShape = new fabric.Rect({ ...props, left: pointer.x, top: pointer.y, width: 0, height: 0 });
+        } else if (tool === 'circle') {
+          currentShape = new fabric.Ellipse({ ...props, left: pointer.x, top: pointer.y, rx: 0, ry: 0, originX: 'center', originY: 'center' });
+        } else if (tool === 'line') {
+          currentShape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], { stroke: color, strokeWidth: stroke, selectable: false, evented: false });
+        } else if (tool === 'text') {
+          const text = new fabric.IText('', { left: pointer.x, top: pointer.y, fontSize: 24, fill: color, selectable: true });
+          canvas.add(text);
+          canvas.setActiveObject(text);
+          text.enterEditing();
+          text.on('editing:exited', () => handleObjectCreation(text));
+          isDrawingShape = false;
+          return;
         }
+
+        if (currentShape) canvas.add(currentShape);
       });
 
       canvas.on('mouse:move', (opt: any) => {
         if (panning && opt.e) {
-          const dx = opt.e.clientX - lastX;
-          const dy = opt.e.clientY - lastY;
-          canvas.relativePan(new fabric.Point(dx, dy));
+          canvas.relativePan(new fabric.Point(opt.e.clientX - lastX, opt.e.clientY - lastY));
           lastX = opt.e.clientX;
           lastY = opt.e.clientY;
           return;
         }
-
-        if (!isDrawing || !currentShape) return;
+        if (!isDrawingShape || !currentShape) return;
 
         const pointer = canvas.getPointer(opt.e);
         const tool = toolRef.current;
 
         if (tool === 'rectangle') {
-          currentShape.set({
-            width: Math.abs(pointer.x - startPoint.x),
-            height: Math.abs(pointer.y - startPoint.y),
-            left: Math.min(startPoint.x, pointer.x),
-            top: Math.min(startPoint.y, pointer.y),
-          });
+          currentShape.set({ width: Math.abs(pointer.x - startPoint.x), height: Math.abs(pointer.y - startPoint.y), left: Math.min(startPoint.x, pointer.x), top: Math.min(startPoint.y, pointer.y) });
         } else if (tool === 'circle') {
-          currentShape.set({
-            rx: Math.abs(pointer.x - startPoint.x) / 2,
-            ry: Math.abs(pointer.y - startPoint.y) / 2,
-            left: startPoint.x + (pointer.x - startPoint.x) / 2,
-            top: startPoint.y + (pointer.y - startPoint.y) / 2,
-          });
+          currentShape.set({ rx: Math.abs(pointer.x - startPoint.x) / 2, ry: Math.abs(pointer.y - startPoint.y) / 2, left: startPoint.x + (pointer.x - startPoint.x) / 2, top: startPoint.y + (pointer.y - startPoint.y) / 2 });
         } else if (tool === 'line') {
           currentShape.set({ x2: pointer.x, y2: pointer.y });
         }
         canvas.renderAll();
       });
 
-      // Mouse Up
       canvas.on('mouse:up', () => {
         if (panning) {
           panning = false;
-          canvas.selection = !readOnly;
+          if (toolRef.current === 'pen') canvas.isDrawingMode = true;
           return;
         }
-        if (isDrawing && currentShape) {
+        if (isDrawingShape && currentShape) {
           handleObjectCreation(currentShape);
           currentShape = null;
         }
-        isDrawing = false;
-      });
-
-      canvas.on('path:created', (opt: any) => {
-        if (opt.path) handleObjectCreation(opt.path);
+        isDrawingShape = false;
       });
 
       const handleResize = () => {
@@ -242,82 +190,84 @@ export const useCanvas = (
 
       return () => {
         window.removeEventListener('resize', handleResize);
-        if (canvasRef.current) {
-          canvasRef.current.dispose();
-        }
+        canvas.dispose();
         isInitializedRef.current = false;
       };
     };
 
     tryInit();
-  }, [onElementAdded, readOnly]);
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
 
-    canvas.isDrawingMode = (selectedTool === 'pen');
-    
-    if (canvas.isDrawingMode) {
-      if (!canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-      }
-      canvas.freeDrawingBrush.width = Number(strokeWidth); 
-      canvas.freeDrawingBrush.color = selectedColor;       
+    if (selectedTool === 'pen') {
+      canvas.isDrawingMode = true;
+      const brush = new fabric.PencilBrush(canvas);
+      brush.width = Number(strokeWidth);
+      brush.color = selectedColor;
+      canvas.freeDrawingBrush = brush;
+    } else {
+      canvas.isDrawingMode = false;
     }
-    
     canvas.requestRenderAll();
   }, [selectedTool, selectedColor, strokeWidth]);
 
-  const loadElements = useCallback((elements: any[]) => {
+  const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-    
     canvas.clear();
     canvas.backgroundColor = '#ffffff';
 
-    const objectsToLoad: any[] = [];
+    const toLoad: any[] = [];
     elements.forEach(el => {
       try {
-        let parsedData = el.jsonData;
-        if (typeof el.jsonData === 'string') {
-          parsedData = JSON.parse(el.jsonData);
-        }
-        objectsToLoad.push(parsedData);
-      } catch (e) {
-        console.error('Failed to parse element JSON', e);
-      }
+        let parsed = typeof el.jsonData === 'string' ? JSON.parse(el.jsonData) : el.jsonData;
+        if (parsed.textBaseline === 'alphabetical') delete parsed.textBaseline;
+        toLoad.push(parsed);
+      } catch (e) { console.error('Parse error', e); }
     });
 
-    if (objectsToLoad.length > 0) {
-      fabric.util.enlivenObjects(objectsToLoad, (objects: any[]) => {
-        objects.forEach((obj, index) => {
-          obj.set({ 
-            selectable: false, 
-            evented: false, 
-            hoverCursor: 'default',
-            hasControls: false,
-            hasBorders: false
-          });
-          if (elements[index]?.id) obj.elementId = elements[index].id;
+    if (toLoad.length > 0) {
+      fabric.util.enlivenObjects(toLoad, (objects: any[]) => {
+        objects.forEach((obj, i) => {
+          obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
+          if (elements[i]?.id) obj.elementId = elements[i].id;
           canvas.add(obj);
         });
-        
-        canvas.renderAll(); 
-        canvas.calcOffset();
-        console.log(`✅ Canvas rendered with ${objects.length} objects`);
-      }, 'fabric');
+        canvas.renderAll();
+        console.log(`✅ Loaded ${objects.length} elements`);
+      }, '');
     } else {
       canvas.renderAll();
     }
   }, []);
 
+  const addElementToCanvas = useCallback((element: any) => {
+    if (!canvasRef.current) return;
+    const exists = canvasRef.current.getObjects().some((o: any) => o.elementId === element.id);
+    if (exists) return;
+
+    try {
+      let parsed = typeof element.jsonData === 'string' ? JSON.parse(element.jsonData) : element.jsonData;
+      if (parsed.textBaseline === 'alphabetical') delete parsed.textBaseline;
+      fabric.util.enlivenObjects([parsed], (objects: any[]) => {
+        objects.forEach(obj => {
+          obj.set({ selectable: false, evented: false, hoverCursor: 'default' });
+          if (element.id) obj.elementId = element.id;
+          canvasRef.current?.add(obj);
+        });
+        canvasRef.current?.renderAll();
+      }, '');
+    } catch (e) { console.error('Add element error', e); }
+  }, []);
+
   const clearCanvas = useCallback(() => {
-    if (canvasRef.current) {
-      canvasRef.current.clear();
-      canvasRef.current.backgroundColor = '#ffffff';
-      canvasRef.current.renderAll();
-    }
+    if (!canvasRef.current) return;
+    canvasRef.current.clear();
+    canvasRef.current.backgroundColor = '#ffffff';
+    canvasRef.current.renderAll();
   }, []);
 
   const exportToJPEG = useCallback((): string => {
@@ -326,13 +276,10 @@ export const useCanvas = (
   }, []);
 
   return {
-    canvasRef,
-    selectedTool, setSelectedTool,
+    canvasRef, selectedTool, setSelectedTool,
     selectedColor, setSelectedColor,
-    strokeWidth, setStrokeWidth,
-    zoom,
-    loadElements,
-    clearCanvas,
-    exportToJPEG
+    strokeWidth, setStrokeWidth, zoom,
+    loadInitialElements, addElementToCanvas,
+    clearCanvas, exportToJPEG,
   };
 };

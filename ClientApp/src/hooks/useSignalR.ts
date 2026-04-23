@@ -4,7 +4,9 @@ import type { BoardElement, Cursor } from '../types/drawing.types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5006';
 
-export const useSignalR = (boardId: string | null, nickname: string) => {
+export const useSignalR = (boardId: string | null, nickname: string, onNewElement?: (element: any) => void)  => {
+  const onNewElementRef = useRef(onNewElement);
+  useEffect(() => { onNewElementRef.current = onNewElement; }, [onNewElement]);
   const connectionRef = useRef<HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [elements, setElements] = useState<BoardElement[]>([]);
@@ -49,8 +51,9 @@ export const useSignalR = (boardId: string | null, nickname: string) => {
             .withAutomaticReconnect([0, 2000, 5000, 10000, 15000])
             .build();
 
-          connection.on('ReceiveElement', (element: BoardElement) => {
+          connection.on('ReceiveElement', (element: any) => {
             setElements(prev => prev.some(e => e.id === element.id) ? prev : [...prev, element]);
+                onNewElementRef.current?.(element);
           });
           connection.on('ReceiveElementDeleted', (id: string) => {
             setElements(prev => prev.filter(e => e.id !== id));
@@ -116,7 +119,7 @@ export const useSignalR = (boardId: string | null, nickname: string) => {
         boardId: String(boardId),
         pageId: String(pageId),
         type: elementType || 'Freehand', 
-        jsonData: JSON.stringify(element),
+        jsonData: JSON.stringify(element.toObject()),
         zIndex: 0
       });
     } catch (err) {
