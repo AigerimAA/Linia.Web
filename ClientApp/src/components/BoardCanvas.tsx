@@ -97,6 +97,17 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     link.click();
   };
 
+  const handleDeleteBoard = async (e: React.MouseEvent, boardId: string) => {
+  e.stopPropagation(); // чтобы не открывался борд
+  if (!confirm('Delete this board?')) return;
+  try {
+    await boardApi.delete(boardId);
+    await loadBoards();
+  } catch (error) {
+    console.error('Failed to delete board:', error);
+  }
+};
+
   if (isLoading || !currentPageId) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">

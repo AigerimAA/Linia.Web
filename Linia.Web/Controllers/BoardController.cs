@@ -1,11 +1,13 @@
 ﻿using Linia.API.Requests;
 using Linia.Application.Commands.ChangeMemberRole;
 using Linia.Application.Commands.CreateBoard;
+using Linia.Application.Commands.DeleteBoard;
 using Linia.Application.Commands.UpdateBoardThumbnail;
 using Linia.Application.DTOs;
 using Linia.Application.Interfaces;
 using Linia.Application.Queries.GetBoard;
 using Linia.Application.Queries.GetBoardList;
+using Linia.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -71,6 +73,13 @@ namespace Linia.API.Controllers
         {
             var command = new ChangeMemberRoleCommand(id, nickname, request.Role, _currentUser.Nickname);
             await _mediator.Send(command);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _mediator.Send(new DeleteBoardCommand(id));
             return NoContent();
         }
     }

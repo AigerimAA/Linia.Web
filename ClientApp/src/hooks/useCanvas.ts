@@ -29,30 +29,29 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    if (selectedTool === 'pen') {
-      canvas.isDrawingMode = true;
-      canvas.defaultCursor = 'default';
-    } else {
-      canvas.isDrawingMode = false;
-      canvas.defaultCursor = selectedTool === 'eraser' ? 'crosshair' : 'default';
-    }
-    canvas.requestRenderAll();
-  }, [selectedTool]);
+useEffect(() => {
+  if (!canvasRef.current) return;
+  const canvas = canvasRef.current;
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-    }
-    canvas.freeDrawingBrush.width = strokeWidth;
-    canvas.freeDrawingBrush.color = selectedColor;
-  }, [selectedColor, strokeWidth]);
+  const brush = new fabric.PencilBrush(canvas);
+  brush.color = selectedColor;
+  brush.width = strokeWidth;
+  canvas.freeDrawingBrush = brush;
 
-  useEffect(() => {
+  if (selectedTool === 'pen') {
+    canvas.isDrawingMode = false;  
+    canvas.isDrawingMode = true;   
+    canvas.defaultCursor = 'default';
+  } else {
+    canvas.isDrawingMode = false;
+    canvas.defaultCursor = selectedTool === 'eraser' ? 'crosshair' : 'default';
+  }
+
+  canvas.requestRenderAll();
+}, [selectedTool, selectedColor, strokeWidth]);
+  
+
+useEffect(() => {
     if (isInitializedRef.current) return;
 
     let attempts = 0;
@@ -95,7 +94,7 @@ export const useCanvas = (
         'i-text': 'Text',
       }[type] || type);
 
-      const handleObjectCreation = (obj: any) => {
+      const handleObjectCreation = (obj: any) => {        
         obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
         lastDrawnObjRef.current = obj;
         const backendType = getBackendType(obj.type);
@@ -103,7 +102,17 @@ export const useCanvas = (
       };
 
       canvas.on('path:created', (opt: any) => {
-        if (opt.path) handleObjectCreation(opt.path);
+        if (!opt.path) return;
+  
+        const currentCanvas = canvasRef.current;
+        if (currentCanvas?.freeDrawingBrush) {
+          opt.path.set({
+            stroke: currentCanvas.freeDrawingBrush.color,
+            strokeWidth: currentCanvas.freeDrawingBrush.width,
+          });
+        }
+        
+        handleObjectCreation(opt.path);
       });
 
       canvas.on('mouse:wheel', (opt: any) => {
@@ -116,6 +125,11 @@ export const useCanvas = (
       });
 
       canvas.on('mouse:down', (opt: any) => {
+        if (canvasRef.current?.freeDrawingBrush) {
+          canvasRef.current.freeDrawingBrush.color = colorRef.current;
+          canvasRef.current.freeDrawingBrush.width = strokeRef.current;
+        }
+
         const tool = toolRef.current;
         const color = colorRef.current;
         const stroke = strokeRef.current;
@@ -134,35 +148,36 @@ export const useCanvas = (
         canvas.isDrawingMode = false;
 
         if (tool === 'eraser') {
-          const activeCanvas = canvasRef.current;
-          if (!activeCanvas) return;
+        const activeCanvas = canvasRef.current;
+        if (!activeCanvas) return;
 
-          const pointer = activeCanvas.getPointer(opt.e, false);
-          const objects = activeCanvas.getObjects();
+        const pointer = activeCanvas.getPointer(opt.e, false);
+        const objects = activeCanvas.getObjects();
+        const eraserRadius = strokeRef.current * 2; // ← радиус зависит от stroke
 
-          for (let i = objects.length - 1; i >= 0; i--) {
-            const obj = objects[i];
-            if (obj === activeCanvas.backgroundImage) continue;
+        for (let i = objects.length - 1; i >= 0; i--) {
+          const obj = objects[i];
+          if (obj === activeCanvas.backgroundImage) continue;
 
-            const bound = obj.getBoundingRect(true, false);
-            const isHit =
-              pointer.x >= bound.left &&
-              pointer.x <= bound.left + bound.width &&
-              pointer.y >= bound.top &&
-              pointer.y <= bound.top + bound.height;
+          const bound = obj.getBoundingRect(true, false);
+          const isHit =
+            pointer.x >= bound.left - eraserRadius &&
+            pointer.x <= bound.left + bound.width + eraserRadius &&
+            pointer.y >= bound.top - eraserRadius &&
+            pointer.y <= bound.top + bound.height + eraserRadius;
 
-            if (isHit) {
-              const elementId = elementIdMap.current.get(obj);
-              activeCanvas.remove(obj);
-              activeCanvas.requestRenderAll();
-              if (elementId) {
-                onElementDeletedRef.current(elementId);
-              }
-              break;
+          if (isHit) {
+            const elementId = elementIdMap.current.get(obj);
+            activeCanvas.remove(obj);
+            activeCanvas.requestRenderAll();
+            if (elementId) {
+              onElementDeletedRef.current(elementId);
             }
+            break;
           }
-          return;
         }
+        return;
+}
 
         const pointer = canvas.getPointer(opt.e);
         isDrawingShape = true;

@@ -18,6 +18,7 @@ export const boardApi = {
   getAll: () => api.get<Board[]>('/board'),
   getById: (id: string) => api.get<Board>(`/board/${id}`),
   create: (name: string) => api.post<{ boardId: string }>('/board', { name }),
+  delete: (id: string) => api.delete(`/board/${id}`),
   updateThumbnail: (id: string, thumbnailUrl: string) =>
     api.patch(`/board/${id}/thumbnail`, { thumbnailUrl }),
   changeRole: (id: string, nickname: string, role: string) =>

@@ -7,8 +7,10 @@ interface ColorPickerProps {
 }
 
 const presetColors = [
-  '#000000', '#FF3B30', '#FF9500', '#FFCC00', '#34C759',
-  '#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FFFFFF'
+  '#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00',
+  '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55',
+  '#8B4513', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+  '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE',
 ];
 
 export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange }) => {
@@ -39,7 +41,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange }) => 
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 w-52">
+          
+          <div className="mb-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Custom color</p>
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full h-8 cursor-pointer rounded border border-gray-300"
+            />
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Presets</p>
           <div className="grid grid-cols-5 gap-2">
             {presetColors.map((preset) => (
               <button

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, FileText } from 'lucide-react';
+import { Plus, Users, FileText, Trash2 } from 'lucide-react';
 import { boardApi, setAuthHeader } from '../../services/api';
 import type { Board } from '../../types/drawing.types';
 import { BoardCardSkeleton } from '../Common/SkeletonLoader';
@@ -38,6 +38,17 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
       onSelectBoard(response.data.boardId);
     } catch (error) {
       console.error('Failed to create board:', error);
+    }
+  };
+
+  const handleDeleteBoard = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm('Delete this board?')) return;
+    try {
+      await boardApi.delete(id);
+      await loadBoards();
+    } catch (error) {
+      console.error('Failed to delete board:', error);
     }
   };
 
@@ -104,8 +115,15 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
                     </div>
                   )}
                 </div>
-                <div className="p-4">
+                <div className="p-4 relative">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{board.name}</h3>
+                  <button
+                    onClick={(e) => handleDeleteBoard(e, board.id)}
+                    className="absolute top-3 right-3 p-1 text-red-400 hover:text-red-600 transition"
+                    title="Delete board"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                   <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                     <div className="flex items-center gap-1">
                       <Users size={14} />
