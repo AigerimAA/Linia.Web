@@ -1,3 +1,4 @@
+// useCanvas.ts
 // @ts-nocheck
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { fabric } from 'fabric';
@@ -24,6 +25,33 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
+  // ✅ Эффект 1: переключение режима инструмента
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+
+    if (selectedTool === 'pen') {
+      canvas.isDrawingMode = true;
+      canvas.defaultCursor = 'default';
+    } else {
+      canvas.isDrawingMode = false;
+      canvas.defaultCursor = selectedTool === 'eraser' ? 'crosshair' : 'default';
+    }
+    canvas.requestRenderAll();
+  }, [selectedTool]);
+
+  // ✅ Эффект 2: настройки кисти — отдельно, никогда не трогает isDrawingMode
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+
+    if (!canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    }
+    canvas.freeDrawingBrush.width = strokeWidth;
+    canvas.freeDrawingBrush.color = selectedColor;
+  }, [selectedColor, strokeWidth]);
+
   useEffect(() => {
     if (isInitializedRef.current) return;
 
@@ -36,7 +64,6 @@ export const useCanvas = (
       }
 
       isInitializedRef.current = true;
-      console.log('🎨 Initializing canvas...');
 
       const canvas = new fabric.Canvas(canvasElement, {
         width: window.innerWidth,
@@ -48,11 +75,12 @@ export const useCanvas = (
 
       canvasRef.current = canvas;
 
+      // Инициализируем кисть
       const brush = new fabric.PencilBrush(canvas);
-      brush.width = 2;
-      brush.color = '#000000';
+      brush.width = strokeRef.current;   // ✅ берём актуальное значение из ref
+      brush.color = colorRef.current;
       canvas.freeDrawingBrush = brush;
-      canvas.isDrawingMode = true; 
+      canvas.isDrawingMode = true;
 
       let panning = false;
       let lastX = 0, lastY = 0;
@@ -66,10 +94,15 @@ export const useCanvas = (
       }[type] || type);
 
       const handleObjectCreation = (obj: any) => {
-        obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
+        obj.set({
+          selectable: false,
+          evented: false,
+          hoverCursor: 'default',
+          hasControls: false,
+          hasBorders: false,
+        });
         const backendType = getBackendType(obj.type);
-        console.log(`📤 Sending ${backendType}...`);
-        onElementAddedRef.current(obj, backendType); // ← ref!
+        onElementAddedRef.current(obj, backendType);
       };
 
       canvas.on('path:created', (opt: any) => {
@@ -99,23 +132,28 @@ export const useCanvas = (
         }
 
         if (readOnly) return;
-        if (tool === 'pen') return; 
+        if (tool === 'pen') return;
 
         canvas.isDrawingMode = false;
 
+        // ✅ Ластик: ручной перебор с getBoundingRect (работает с evented: false)
         if (tool === 'eraser') {
           const pointer = canvas.getPointer(opt.e);
           const objects = canvas.getObjects();
+
           for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
-            obj.evented = true;
-            obj.selectable = true;
-            const contains = obj.containsPoint(pointer);
-            obj.evented = false;
-            obj.selectable = false;
-            if (contains) {
+            // getBoundingRect возвращает координаты с учётом трансформаций canvas
+            const bound = obj.getBoundingRect(true, true);
+
+            if (
+              pointer.x >= bound.left &&
+              pointer.x <= bound.left + bound.width &&
+              pointer.y >= bound.top &&
+              pointer.y <= bound.top + bound.height
+            ) {
               canvas.remove(obj);
-              canvas.renderAll();
+              canvas.requestRenderAll();
               break;
             }
           }
@@ -126,7 +164,15 @@ export const useCanvas = (
         isDrawingShape = true;
         startPoint = { x: pointer.x, y: pointer.y };
 
-        const props = { fill: 'transparent', stroke: color, strokeWidth: stroke, selectable: false, evented: false, hasControls: false, hasBorders: false };
+        const props = {
+          fill: 'transparent',
+          stroke: color,
+          strokeWidth: stroke,
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+        };
 
         if (tool === 'rectangle') {
           currentShape = new fabric.Rect({ ...props, left: pointer.x, top: pointer.y, width: 0, height: 0 });
@@ -160,9 +206,19 @@ export const useCanvas = (
         const tool = toolRef.current;
 
         if (tool === 'rectangle') {
-          currentShape.set({ width: Math.abs(pointer.x - startPoint.x), height: Math.abs(pointer.y - startPoint.y), left: Math.min(startPoint.x, pointer.x), top: Math.min(startPoint.y, pointer.y) });
+          currentShape.set({
+            width: Math.abs(pointer.x - startPoint.x),
+            height: Math.abs(pointer.y - startPoint.y),
+            left: Math.min(startPoint.x, pointer.x),
+            top: Math.min(startPoint.y, pointer.y),
+          });
         } else if (tool === 'circle') {
-          currentShape.set({ rx: Math.abs(pointer.x - startPoint.x) / 2, ry: Math.abs(pointer.y - startPoint.y) / 2, left: startPoint.x + (pointer.x - startPoint.x) / 2, top: startPoint.y + (pointer.y - startPoint.y) / 2 });
+          currentShape.set({
+            rx: Math.abs(pointer.x - startPoint.x) / 2,
+            ry: Math.abs(pointer.y - startPoint.y) / 2,
+            left: startPoint.x + (pointer.x - startPoint.x) / 2,
+            top: startPoint.y + (pointer.y - startPoint.y) / 2,
+          });
         } else if (tool === 'line') {
           currentShape.set({ x2: pointer.x, y2: pointer.y });
         }
@@ -172,6 +228,7 @@ export const useCanvas = (
       canvas.on('mouse:up', () => {
         if (panning) {
           panning = false;
+          // ✅ Восстанавливаем режим карандаша после панорамирования
           if (toolRef.current === 'pen') canvas.isDrawingMode = true;
           return;
         }
@@ -180,6 +237,8 @@ export const useCanvas = (
           currentShape = null;
         }
         isDrawingShape = false;
+        // ✅ Восстанавливаем режим карандаша после рисования фигуры
+        if (toolRef.current === 'pen') canvas.isDrawingMode = true;
       });
 
       const handleResize = () => {
@@ -197,22 +256,6 @@ export const useCanvas = (
 
     tryInit();
   }, []);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-
-    if (selectedTool === 'pen') {
-      canvas.isDrawingMode = true;
-      const brush = new fabric.PencilBrush(canvas);
-      brush.width = Number(strokeWidth);
-      brush.color = selectedColor;
-      canvas.freeDrawingBrush = brush;
-    } else {
-      canvas.isDrawingMode = false;
-    }
-    canvas.requestRenderAll();
-  }, [selectedTool, selectedColor, strokeWidth]);
 
   const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
@@ -237,7 +280,6 @@ export const useCanvas = (
           canvas.add(obj);
         });
         canvas.renderAll();
-        console.log(`✅ Loaded ${objects.length} elements`);
       }, '');
     } else {
       canvas.renderAll();
