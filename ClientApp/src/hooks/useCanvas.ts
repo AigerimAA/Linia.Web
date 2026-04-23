@@ -97,10 +97,11 @@ export const useCanvas = (
 
       const handleObjectCreation = (obj: any) => {
         obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
-        lastDrawnObjRef.current = obj;  
+        lastDrawnObjRef.current = obj;
         const backendType = getBackendType(obj.type);
         onElementAddedRef.current(obj, backendType);
       };
+
       canvas.on('path:created', (opt: any) => {
         if (opt.path) handleObjectCreation(opt.path);
       });
@@ -133,25 +134,27 @@ export const useCanvas = (
         canvas.isDrawingMode = false;
 
         if (tool === 'eraser') {
-          const pointer = canvas.getPointer(opt.e);
-          const objects = canvas.getObjects();
+          const activeCanvas = canvasRef.current;
+          if (!activeCanvas) return;
+
+          const pointer = activeCanvas.getPointer(opt.e, false);
+          const objects = activeCanvas.getObjects();
+
           for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
-            if (obj === canvas.backgroundImage) continue;
-            let isHit = false;
-            if (obj.type === 'path') {
-              isHit = obj.containsPoint(pointer);
-            } else {
-              const bound = obj.getBoundingRect(true, true);
-              isHit = pointer.x >= bound.left &&
-                      pointer.x <= bound.left + bound.width &&
-                      pointer.y >= bound.top &&
-                      pointer.y <= bound.top + bound.height;
-            }
+            if (obj === activeCanvas.backgroundImage) continue;
+
+            const bound = obj.getBoundingRect(true, false);
+            const isHit =
+              pointer.x >= bound.left &&
+              pointer.x <= bound.left + bound.width &&
+              pointer.y >= bound.top &&
+              pointer.y <= bound.top + bound.height;
+
             if (isHit) {
               const elementId = elementIdMap.current.get(obj);
-              canvas.remove(obj);
-              canvas.requestRenderAll();
+              activeCanvas.remove(obj);
+              activeCanvas.requestRenderAll();
               if (elementId) {
                 onElementDeletedRef.current(elementId);
               }
@@ -260,39 +263,32 @@ export const useCanvas = (
     if (lastDrawnObjRef.current) {
       elementIdMap.current.set(lastDrawnObjRef.current, elementId);
       lastDrawnObjRef.current = null;
-      console.log('✅ Assigned ID to last drawn obj:', elementId);
     }
   }, []);
 
   const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    canvas.clear();
-    canvas.backgroundColor = '#ffffff';
+    canvasRef.current.clear();
+    canvasRef.current.backgroundColor = '#ffffff';
 
     elements.forEach(el => {
       try {
         let parsed = typeof el.jsonData === 'string'
           ? JSON.parse(el.jsonData)
           : el.jsonData;
-        if (parsed.textBaseline === 'alphabetical') delete parsed.textBaseline;
+        if (parsed.textBaseline) delete parsed.textBaseline;
 
         fabric.util.enlivenObjects([parsed], (objects: any[]) => {
+          if (!canvasRef.current) return;
           const obj = objects[0];
           if (!obj) return;
-          obj.set({
-            selectable: false,
-            evented: false,
-            hoverCursor: 'default',
-            hasControls: false,
-            hasBorders: false,
-          });
+          obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
           elementIdMap.current.set(obj, el.id);
-          canvas.add(obj);
-          canvas.renderAll();
+          canvasRef.current.add(obj);
+          canvasRef.current.renderAll();
         }, '');
       } catch (e) {
-        console.error('Parse error', e);
+        console.error('Parse error:', e);
       }
     });
   }, []);
@@ -307,7 +303,7 @@ export const useCanvas = (
       let parsed = typeof element.jsonData === 'string'
         ? JSON.parse(element.jsonData)
         : element.jsonData;
-      if (parsed.textBaseline === 'alphabetical') delete parsed.textBaseline;
+      if (parsed.textBaseline) delete parsed.textBaseline;
 
       fabric.util.enlivenObjects([parsed], (objects: any[]) => {
         const obj = objects[0];
@@ -335,11 +331,11 @@ export const useCanvas = (
   }, []);
 
   return {
-  canvasRef, selectedTool, setSelectedTool,
-  selectedColor, setSelectedColor,
-  strokeWidth, setStrokeWidth, zoom,
-  loadInitialElements, addElementToCanvas,
-  clearCanvas, exportToJPEG,
-  assignElementId,
-};
+    canvasRef, selectedTool, setSelectedTool,
+    selectedColor, setSelectedColor,
+    strokeWidth, setStrokeWidth, zoom,
+    loadInitialElements, addElementToCanvas,
+    clearCanvas, exportToJPEG,
+    assignElementId,
+  };
 };

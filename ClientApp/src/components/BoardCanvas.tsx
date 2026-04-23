@@ -57,6 +57,10 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   }, [currentPageId]);
 
   useEffect(() => {
+  elementsLoadedRef.current = false;
+}, [boardId]);
+
+  useEffect(() => {
     addElementToCanvasRef.current = addElementToCanvas;
   }, [addElementToCanvas]);
 
