@@ -32,10 +32,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
 
   const handleElementAdded = useCallback((fabricObj: any, backendType: string) => {
     const pageId = currentPageIdRef.current;
-    if (!pageId) {
-      console.error('No pageId!');
-      return;
-    }
+    if (!pageId) return;
     sendElement(fabricObj, pageId, backendType);
   }, []);
 
@@ -51,14 +48,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     assignElementId,
   } = useCanvas(handleElementAdded, deleteElement, false);
 
-
   useEffect(() => {
     currentPageIdRef.current = currentPageId;
   }, [currentPageId]);
 
   useEffect(() => {
-  elementsLoadedRef.current = false;
-}, [boardId]);
+    elementsLoadedRef.current = false;
+  }, [boardId]);
 
   useEffect(() => {
     addElementToCanvasRef.current = addElementToCanvas;
@@ -70,9 +66,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
 
   useEffect(() => {
     if (elementsLoadedRef.current || elements.length === 0) return;
-    console.log('Elements available:', elements.length);
     const timer = setTimeout(() => {
-      console.log('Loading initial elements:', elements.length);
       loadInitialElements(elements);
       elementsLoadedRef.current = true;
     }, 300);
@@ -96,17 +90,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     link.href = dataUrl;
     link.click();
   };
-
-  const handleDeleteBoard = async (e: React.MouseEvent, boardId: string) => {
-  e.stopPropagation(); // чтобы не открывался борд
-  if (!confirm('Delete this board?')) return;
-  try {
-    await boardApi.delete(boardId);
-    await loadBoards();
-  } catch (error) {
-    console.error('Failed to delete board:', error);
-  }
-};
 
   if (isLoading || !currentPageId) {
     return (

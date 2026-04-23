@@ -29,29 +29,28 @@ export const useCanvas = (
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
-useEffect(() => {
-  if (!canvasRef.current) return;
-  const canvas = canvasRef.current;
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
 
-  const brush = new fabric.PencilBrush(canvas);
-  brush.color = selectedColor;
-  brush.width = strokeWidth;
-  canvas.freeDrawingBrush = brush;
+    const brush = new fabric.PencilBrush(canvas);
+    brush.color = selectedColor;
+    brush.width = strokeWidth;
+    canvas.freeDrawingBrush = brush;
 
-  if (selectedTool === 'pen') {
-    canvas.isDrawingMode = false;  
-    canvas.isDrawingMode = true;   
-    canvas.defaultCursor = 'default';
-  } else {
-    canvas.isDrawingMode = false;
-    canvas.defaultCursor = selectedTool === 'eraser' ? 'crosshair' : 'default';
-  }
+    if (selectedTool === 'pen') {
+      canvas.isDrawingMode = false;
+      canvas.isDrawingMode = true;
+      canvas.defaultCursor = 'default';
+    } else {
+      canvas.isDrawingMode = false;
+      canvas.defaultCursor = selectedTool === 'eraser' ? 'crosshair' : 'default';
+    }
 
-  canvas.requestRenderAll();
-}, [selectedTool, selectedColor, strokeWidth]);
-  
+    canvas.requestRenderAll();
+  }, [selectedTool, selectedColor, strokeWidth]);
 
-useEffect(() => {
+  useEffect(() => {
     if (isInitializedRef.current) return;
 
     let attempts = 0;
@@ -94,7 +93,7 @@ useEffect(() => {
         'i-text': 'Text',
       }[type] || type);
 
-      const handleObjectCreation = (obj: any) => {        
+      const handleObjectCreation = (obj: any) => {
         obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
         lastDrawnObjRef.current = obj;
         const backendType = getBackendType(obj.type);
@@ -103,7 +102,6 @@ useEffect(() => {
 
       canvas.on('path:created', (opt: any) => {
         if (!opt.path) return;
-  
         const currentCanvas = canvasRef.current;
         if (currentCanvas?.freeDrawingBrush) {
           opt.path.set({
@@ -111,7 +109,6 @@ useEffect(() => {
             strokeWidth: currentCanvas.freeDrawingBrush.width,
           });
         }
-        
         handleObjectCreation(opt.path);
       });
 
@@ -148,36 +145,36 @@ useEffect(() => {
         canvas.isDrawingMode = false;
 
         if (tool === 'eraser') {
-        const activeCanvas = canvasRef.current;
-        if (!activeCanvas) return;
+          const activeCanvas = canvasRef.current;
+          if (!activeCanvas) return;
 
-        const pointer = activeCanvas.getPointer(opt.e, false);
-        const objects = activeCanvas.getObjects();
-        const eraserRadius = strokeRef.current * 2; // ← радиус зависит от stroke
+          const pointer = activeCanvas.getPointer(opt.e, false);
+          const objects = activeCanvas.getObjects();
+          const eraserRadius = strokeRef.current * 2;
 
-        for (let i = objects.length - 1; i >= 0; i--) {
-          const obj = objects[i];
-          if (obj === activeCanvas.backgroundImage) continue;
+          for (let i = objects.length - 1; i >= 0; i--) {
+            const obj = objects[i];
+            if (obj === activeCanvas.backgroundImage) continue;
 
-          const bound = obj.getBoundingRect(true, false);
-          const isHit =
-            pointer.x >= bound.left - eraserRadius &&
-            pointer.x <= bound.left + bound.width + eraserRadius &&
-            pointer.y >= bound.top - eraserRadius &&
-            pointer.y <= bound.top + bound.height + eraserRadius;
+            const bound = obj.getBoundingRect(true, false);
+            const isHit =
+              pointer.x >= bound.left - eraserRadius &&
+              pointer.x <= bound.left + bound.width + eraserRadius &&
+              pointer.y >= bound.top - eraserRadius &&
+              pointer.y <= bound.top + bound.height + eraserRadius;
 
-          if (isHit) {
-            const elementId = elementIdMap.current.get(obj);
-            activeCanvas.remove(obj);
-            activeCanvas.requestRenderAll();
-            if (elementId) {
-              onElementDeletedRef.current(elementId);
+            if (isHit) {
+              const elementId = elementIdMap.current.get(obj);
+              activeCanvas.remove(obj);
+              activeCanvas.requestRenderAll();
+              if (elementId) {
+                onElementDeletedRef.current(elementId);
+              }
+              break;
             }
-            break;
           }
+          return;
         }
-        return;
-}
 
         const pointer = canvas.getPointer(opt.e);
         isDrawingShape = true;

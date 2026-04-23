@@ -81,7 +81,7 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition shadow-md"
+            className="flex items-center gap-2 px-4 py-2 bg-[#d5224a] text-white rounded-xl hover:bg-[#b81d3f] transition shadow-md"
           >
             <Plus size={20} />
             New Board
@@ -93,7 +93,7 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
             <div className="text-gray-400 dark:text-gray-500 text-lg">No boards yet</div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+              className="mt-4 px-4 py-2 bg-[#d5224a] text-white rounded-lg hover:bg-[#b81d3f] transition"
             >
               Create your first board
             </button>
@@ -106,7 +106,7 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
                 onClick={() => onSelectBoard(board.id)}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-200 cursor-pointer overflow-hidden border border-gray-200 dark:border-gray-700"
               >
-                <div className="h-40 bg-gradient-to-br from-blue-400 to-purple-500 relative">
+                <div className="h-40 bg-white relative">
                   {board.thumbnailUrl ? (
                     <img src={board.thumbnailUrl} alt={board.name} className="w-full h-full object-cover" />
                   ) : (
@@ -115,8 +115,8 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
                     </div>
                   )}
                 </div>
-                <div className="p-4 relative">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{board.name}</h3>
+                <div className="p-4 relative bg-slate-700">
+                  <h3 className="text-lg font-semibold text-white mb-2">{board.name}</h3>
                   <button
                     onClick={(e) => handleDeleteBoard(e, board.id)}
                     className="absolute top-3 right-3 p-1 text-red-400 hover:text-red-600 transition"
@@ -124,7 +124,7 @@ export const BoardList: React.FC<BoardListProps> = ({ onSelectBoard, nickname })
                   >
                     <Trash2 size={16} />
                   </button>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-4 text-sm text-white/80">
                     <div className="flex items-center gap-1">
                       <Users size={14} />
                       <span>{board.membersCount}</span>
