@@ -1,15 +1,18 @@
-// useCanvas.ts
 // @ts-nocheck
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { fabric } from 'fabric';
 
 export const useCanvas = (
   onElementAdded: (element: any, backendType: string) => void,
+  onElementDeleted: (id: string) => void,
   readOnly: boolean = false
 ) => {
   const canvasRef = useRef<any>(null);
   const isInitializedRef = useRef(false);
   const onElementAddedRef = useRef(onElementAdded);
+  const onElementDeletedRef = useRef(onElementDeleted);
+  const elementIdMap = useRef<WeakMap<object, string>>(new WeakMap());
+  const lastDrawnObjRef = useRef<any>(null);
 
   const [selectedTool, setSelectedTool] = useState<string>('pen');
   const [selectedColor, setSelectedColor] = useState<string>('#000000');
@@ -21,15 +24,14 @@ export const useCanvas = (
   const strokeRef = useRef<number>(2);
 
   useEffect(() => { onElementAddedRef.current = onElementAdded; }, [onElementAdded]);
+  useEffect(() => { onElementDeletedRef.current = onElementDeleted; }, [onElementDeleted]);
   useEffect(() => { toolRef.current = selectedTool; }, [selectedTool]);
   useEffect(() => { colorRef.current = selectedColor; }, [selectedColor]);
   useEffect(() => { strokeRef.current = strokeWidth; }, [strokeWidth]);
 
-  // ✅ Эффект 1: переключение режима инструмента
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-
     if (selectedTool === 'pen') {
       canvas.isDrawingMode = true;
       canvas.defaultCursor = 'default';
@@ -40,11 +42,9 @@ export const useCanvas = (
     canvas.requestRenderAll();
   }, [selectedTool]);
 
-  // ✅ Эффект 2: настройки кисти — отдельно, никогда не трогает isDrawingMode
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-
     if (!canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
     }
@@ -75,9 +75,8 @@ export const useCanvas = (
 
       canvasRef.current = canvas;
 
-      // Инициализируем кисть
       const brush = new fabric.PencilBrush(canvas);
-      brush.width = strokeRef.current;   // ✅ берём актуальное значение из ref
+      brush.width = strokeRef.current;
       brush.color = colorRef.current;
       canvas.freeDrawingBrush = brush;
       canvas.isDrawingMode = true;
@@ -89,22 +88,19 @@ export const useCanvas = (
       let startPoint = { x: 0, y: 0 };
 
       const getBackendType = (type: string) => ({
-        'ellipse': 'Circle', 'rect': 'Rectangle',
-        'line': 'Line', 'path': 'Freehand', 'i-text': 'Text',
+        'ellipse': 'Circle',
+        'rect': 'Rectangle',
+        'line': 'Line',
+        'path': 'Freehand',
+        'i-text': 'Text',
       }[type] || type);
 
       const handleObjectCreation = (obj: any) => {
-        obj.set({
-          selectable: false,
-          evented: false,
-          hoverCursor: 'default',
-          hasControls: false,
-          hasBorders: false,
-        });
+        obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
+        lastDrawnObjRef.current = obj;  
         const backendType = getBackendType(obj.type);
         onElementAddedRef.current(obj, backendType);
       };
-
       canvas.on('path:created', (opt: any) => {
         if (opt.path) handleObjectCreation(opt.path);
       });
@@ -136,24 +132,29 @@ export const useCanvas = (
 
         canvas.isDrawingMode = false;
 
-        // ✅ Ластик: ручной перебор с getBoundingRect (работает с evented: false)
         if (tool === 'eraser') {
           const pointer = canvas.getPointer(opt.e);
           const objects = canvas.getObjects();
-
           for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
-            // getBoundingRect возвращает координаты с учётом трансформаций canvas
-            const bound = obj.getBoundingRect(true, true);
-
-            if (
-              pointer.x >= bound.left &&
-              pointer.x <= bound.left + bound.width &&
-              pointer.y >= bound.top &&
-              pointer.y <= bound.top + bound.height
-            ) {
+            if (obj === canvas.backgroundImage) continue;
+            let isHit = false;
+            if (obj.type === 'path') {
+              isHit = obj.containsPoint(pointer);
+            } else {
+              const bound = obj.getBoundingRect(true, true);
+              isHit = pointer.x >= bound.left &&
+                      pointer.x <= bound.left + bound.width &&
+                      pointer.y >= bound.top &&
+                      pointer.y <= bound.top + bound.height;
+            }
+            if (isHit) {
+              const elementId = elementIdMap.current.get(obj);
               canvas.remove(obj);
               canvas.requestRenderAll();
+              if (elementId) {
+                onElementDeletedRef.current(elementId);
+              }
               break;
             }
           }
@@ -228,7 +229,6 @@ export const useCanvas = (
       canvas.on('mouse:up', () => {
         if (panning) {
           panning = false;
-          // ✅ Восстанавливаем режим карандаша после панорамирования
           if (toolRef.current === 'pen') canvas.isDrawingMode = true;
           return;
         }
@@ -237,7 +237,6 @@ export const useCanvas = (
           currentShape = null;
         }
         isDrawingShape = false;
-        // ✅ Восстанавливаем режим карандаша после рисования фигуры
         if (toolRef.current === 'pen') canvas.isDrawingMode = true;
       });
 
@@ -257,52 +256,70 @@ export const useCanvas = (
     tryInit();
   }, []);
 
+  const assignElementId = useCallback((elementId: string) => {
+    if (lastDrawnObjRef.current) {
+      elementIdMap.current.set(lastDrawnObjRef.current, elementId);
+      lastDrawnObjRef.current = null;
+      console.log('✅ Assigned ID to last drawn obj:', elementId);
+    }
+  }, []);
+
   const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     canvas.clear();
     canvas.backgroundColor = '#ffffff';
 
-    const toLoad: any[] = [];
     elements.forEach(el => {
       try {
-        let parsed = typeof el.jsonData === 'string' ? JSON.parse(el.jsonData) : el.jsonData;
+        let parsed = typeof el.jsonData === 'string'
+          ? JSON.parse(el.jsonData)
+          : el.jsonData;
         if (parsed.textBaseline === 'alphabetical') delete parsed.textBaseline;
-        toLoad.push(parsed);
-      } catch (e) { console.error('Parse error', e); }
-    });
 
-    if (toLoad.length > 0) {
-      fabric.util.enlivenObjects(toLoad, (objects: any[]) => {
-        objects.forEach((obj, i) => {
-          obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
-          if (elements[i]?.id) obj.elementId = elements[i].id;
+        fabric.util.enlivenObjects([parsed], (objects: any[]) => {
+          const obj = objects[0];
+          if (!obj) return;
+          obj.set({
+            selectable: false,
+            evented: false,
+            hoverCursor: 'default',
+            hasControls: false,
+            hasBorders: false,
+          });
+          elementIdMap.current.set(obj, el.id);
           canvas.add(obj);
-        });
-        canvas.renderAll();
-      }, '');
-    } else {
-      canvas.renderAll();
-    }
+          canvas.renderAll();
+        }, '');
+      } catch (e) {
+        console.error('Parse error', e);
+      }
+    });
   }, []);
 
   const addElementToCanvas = useCallback((element: any) => {
     if (!canvasRef.current) return;
-    const exists = canvasRef.current.getObjects().some((o: any) => o.elementId === element.id);
+    const exists = canvasRef.current.getObjects()
+      .some((o: any) => elementIdMap.current.get(o) === element.id);
     if (exists) return;
 
     try {
-      let parsed = typeof element.jsonData === 'string' ? JSON.parse(element.jsonData) : element.jsonData;
+      let parsed = typeof element.jsonData === 'string'
+        ? JSON.parse(element.jsonData)
+        : element.jsonData;
       if (parsed.textBaseline === 'alphabetical') delete parsed.textBaseline;
+
       fabric.util.enlivenObjects([parsed], (objects: any[]) => {
-        objects.forEach(obj => {
-          obj.set({ selectable: false, evented: false, hoverCursor: 'default' });
-          if (element.id) obj.elementId = element.id;
-          canvasRef.current?.add(obj);
-        });
+        const obj = objects[0];
+        if (!obj) return;
+        obj.set({ selectable: false, evented: false, hoverCursor: 'default' });
+        elementIdMap.current.set(obj, element.id);
+        canvasRef.current?.add(obj);
         canvasRef.current?.renderAll();
       }, '');
-    } catch (e) { console.error('Add element error', e); }
+    } catch (e) {
+      console.error('Add element error', e);
+    }
   }, []);
 
   const clearCanvas = useCallback(() => {
@@ -318,10 +335,11 @@ export const useCanvas = (
   }, []);
 
   return {
-    canvasRef, selectedTool, setSelectedTool,
-    selectedColor, setSelectedColor,
-    strokeWidth, setStrokeWidth, zoom,
-    loadInitialElements, addElementToCanvas,
-    clearCanvas, exportToJPEG,
-  };
+  canvasRef, selectedTool, setSelectedTool,
+  selectedColor, setSelectedColor,
+  strokeWidth, setStrokeWidth, zoom,
+  loadInitialElements, addElementToCanvas,
+  clearCanvas, exportToJPEG,
+  assignElementId,
+};
 };

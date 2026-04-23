@@ -19,13 +19,17 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   const currentPageIdRef = useRef<string | null>(null);
   const elementsLoadedRef = useRef(false);
   const addElementToCanvasRef = useRef<((el: any) => void) | null>(null);
+  const assignElementIdRef = useRef<((id: string) => void) | null>(null);
 
   const {
-    isConnected, elements, cursors, currentPageId, isLoading, sendElement, sendCursor,
-  } = useSignalR(boardId, nickname, (newElement) => {
-    addElementToCanvasRef.current?.(newElement);
-  });
-  
+    isConnected, elements, cursors, currentPageId, isLoading, sendElement, sendCursor, deleteElement,
+  } = useSignalR(
+    boardId,
+    nickname,
+    (newElement) => { addElementToCanvasRef.current?.(newElement); },
+    (elementId) => { assignElementIdRef.current?.(elementId); }
+  );
+
   const handleElementAdded = useCallback((fabricObj: any, backendType: string) => {
     const pageId = currentPageIdRef.current;
     if (!pageId) {
@@ -33,9 +37,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
       return;
     }
     sendElement(fabricObj, pageId, backendType);
-  }, [sendElement]);
+  }, []);
 
-    const {
+  const {
     selectedTool, setSelectedTool,
     selectedColor, setSelectedColor,
     strokeWidth, setStrokeWidth,
@@ -44,7 +48,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     addElementToCanvas,
     clearCanvas,
     exportToJPEG,
-  } = useCanvas(handleElementAdded, false);
+    assignElementId,
+  } = useCanvas(handleElementAdded, deleteElement, false);
+
 
   useEffect(() => {
     currentPageIdRef.current = currentPageId;
@@ -55,8 +61,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   }, [addElementToCanvas]);
 
   useEffect(() => {
+    assignElementIdRef.current = assignElementId;
+  }, [assignElementId]);
+
+  useEffect(() => {
     if (elementsLoadedRef.current || elements.length === 0) return;
-    console.log('Elements available:', elements.length); 
+    console.log('Elements available:', elements.length);
     const timer = setTimeout(() => {
       console.log('Loading initial elements:', elements.length);
       loadInitialElements(elements);
@@ -64,7 +74,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     }, 300);
     return () => clearTimeout(timer);
   }, [elements, loadInitialElements]);
-
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

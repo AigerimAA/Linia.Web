@@ -98,7 +98,27 @@ namespace Linia.Infrastructure.SignalR
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, boardId.ToString());
             await Clients.Group(boardId.ToString()).UserLeft(boardId, nickname);
         }
+        public async Task DeleteElement(DeleteElementRequest request)
+        {
+            var command = new DeleteElementCommand(
+                request.BoardId,
+                request.PageId,
+                request.ElementId,
+                _currentUser.Nickname);
 
+            try
+            {
+                await _mediator.Send(command);
+                await Clients.Group(request.BoardId.ToString())
+                    .ReceiveElementDeleted(request.BoardId, request.ElementId);
+            }
+            catch (Exception ex) when (ex is ForbiddenException or DomainException)
+            {
+                await Clients.Caller.CommandFailed(ex.Message);
+            }
+        }
+
+        public record DeleteElementRequest(Guid BoardId, Guid PageId, Guid ElementId);
         public async Task SendCursor(CursorDto cursor)
         {
             await Clients.Group(cursor.BoardId.ToString()).ReceiveCursor(cursor);

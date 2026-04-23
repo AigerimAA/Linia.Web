@@ -18,7 +18,6 @@ namespace Linia.Infrastructure.Repositories
         public async Task<Board?> GetByIdAsync(Guid id, CancellationToken ct = default)
         {
             return await _context.Boards
-                .AsNoTracking()
                 .Include(b => b.Pages)
                     .ThenInclude(p => p.Elements)
                 .Include(b => b.Members)
@@ -68,7 +67,7 @@ namespace Linia.Infrastructure.Repositories
             {
                 await _context.SaveChangesAsync(ct);
             }
-            catch (DbUpdateConcurrencyException ex)
+            catch (DbUpdateConcurrencyException)
             {
                 throw new DomainException("Could not save changes due to a data conflict. Please try again.");
             }

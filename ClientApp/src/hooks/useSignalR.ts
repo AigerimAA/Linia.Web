@@ -4,16 +4,19 @@ import type { BoardElement, Cursor } from '../types/drawing.types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5006';
 
-export const useSignalR = (boardId: string | null, nickname: string, onNewElement?: (element: any) => void)  => {
+export const useSignalR = (boardId: string | null, nickname: string, onNewElement?: (element: any) => void, onElementDrawn?: (elementId: string) => void )  => {
   const onNewElementRef = useRef(onNewElement);
   useEffect(() => { onNewElementRef.current = onNewElement; }, [onNewElement]);
   const connectionRef = useRef<HubConnection | null>(null);
+  const onElementDrawnRef = useRef(onElementDrawn);
   const [isConnected, setIsConnected] = useState(false);
   const [elements, setElements] = useState<BoardElement[]>([]);
   const [cursors, setCursors] = useState<Cursor[]>([]);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+
+  useEffect(() => { onElementDrawnRef.current = onElementDrawn; }, [onElementDrawn]);
   useEffect(() => {
     if (!boardId || !nickname) return;
     let isMounted = true;
@@ -77,6 +80,7 @@ export const useSignalR = (boardId: string | null, nickname: string, onNewElemen
           });
           connection.on('ElementDrawn', (elementId: string) => {
             console.log('✅ Element saved on server with ID:', elementId);
+            onElementDrawnRef.current?.(elementId);
           });
 
           await connection.start();
@@ -138,13 +142,21 @@ export const useSignalR = (boardId: string | null, nickname: string, onNewElemen
   }, [boardId, nickname]);
 
   const deleteElement = useCallback(async (elementId: string) => {
-    if (!connectionRef.current || !boardId) return;
+    console.log('🔴 deleteElement called:', elementId);
+    console.log('🔴 connection state:', connectionRef.current?.state);
+    console.log('🔴 boardId:', boardId);
+    console.log('🔴 currentPageId:', currentPageId);
+    if (!connectionRef.current || !boardId) {
+      console.error('❌ Cannot delete - missing connection or boardId');
+      return;
+    }
+
     await connectionRef.current.invoke('DeleteElement', {
       boardId: String(boardId),
       pageId: currentPageId ? String(currentPageId) : '',
       elementId,
       requestedBy: nickname
-    }).catch(() => {});
+    }).catch((err) => console.error('❌ DeleteElement invoke failed:', err));
   }, [boardId, currentPageId, nickname]);
 
   return { isConnected, elements, cursors, currentPageId, isLoading, sendElement, sendCursor, deleteElement };

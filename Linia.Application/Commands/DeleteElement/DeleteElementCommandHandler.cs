@@ -23,7 +23,7 @@ namespace Linia.Application.Commands.DeleteElement
         {
             _logger.LogInformation("Deleting element {ElementId} by {User}", request.ElementId, request.RequestedBy);
 
-            var board = await _boardRepository.GetByIdAsync(request.BoardId, cancellationToken);
+            var board = await _boardRepository.GetByIdWithPagesAsync(request.BoardId, cancellationToken);
             if (board == null) throw new NotFoundException("Board not found");
 
             if (!board.CanUserEdit(request.RequestedBy))

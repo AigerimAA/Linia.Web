@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Linia.API.Middleware;
 using Linia.Application;
 using Linia.Infrastructure;
@@ -13,7 +14,10 @@ namespace Linia.Web
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                    options.JsonSerializerOptions.PropertyNamingPolicy =
+                        JsonNamingPolicy.CamelCase);
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
