@@ -69,17 +69,31 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         <ColorPicker color={selectedColor} onChange={onColorChange} />
 
-        <div className="flex items-center gap-2 px-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Stroke</span>
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={strokeWidth}
-            onChange={(e) => onStrokeWidthChange(parseInt(e.target.value))}
-            className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          />
-          <span className="text-xs text-gray-500 dark:text-gray-400 w-8">{strokeWidth}px</span>
+        <div className="flex items-center gap-2 px-2 border-l border-gray-200 dark:border-gray-700 ml-2">
+          {[2, 6, 12].map((value) => (
+            <button
+              key={value}
+              onClick={() => onStrokeWidthChange(value)}
+              className={`group relative flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                strokeWidth === value 
+                  ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-500' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <div 
+                className={`rounded-full transition-colors ${
+                  strokeWidth === value ? 'bg-blue-500' : 'bg-gray-400'
+                }`}
+                style={{ 
+                  width: value === 2 ? '4px' : value === 6 ? '8px' : '14px', 
+                  height: value === 2 ? '4px' : value === 6 ? '8px' : '14px' 
+                }} 
+              />
+              <span className="absolute -top-8 scale-0 group-hover:scale-100 transition-all bg-gray-800 text-white text-[10px] px-2 py-1 rounded">
+                {value}px
+              </span>
+            </button>
+          ))}
         </div>
 
         <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-1" />
