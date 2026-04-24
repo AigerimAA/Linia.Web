@@ -32,12 +32,8 @@ namespace Linia.Application.Commands.AddElement
             _logger.LogInformation("Adding element to page {PageId} by {Nickname}",
                 request.PageId, request.AuthorNickname);
 
-            var board = await _boardRepository.GetByIdWithPagesAsync(request.BoardId, cancellationToken);
-
-            if (board == null)
-            {
-                throw new NotFoundException("Board not found");
-            }
+            var board = await _boardRepository.GetByIdWithPagesAsync(request.BoardId, cancellationToken) 
+                ?? throw new NotFoundException("Board not found");
 
             if (!board.Members.Any(m => m.Nickname.Equals(request.AuthorNickname, StringComparison.OrdinalIgnoreCase)))
             {
