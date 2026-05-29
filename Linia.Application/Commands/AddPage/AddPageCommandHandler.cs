@@ -11,10 +11,7 @@ namespace Linia.Application.Commands.AddPage
         private readonly IDomainEventPublisher _eventPublisher;
         private readonly ILogger<AddPageCommandHandler> _logger;
 
-        public AddPageCommandHandler(
-            IBoardRepository boardRepository,
-            IDomainEventPublisher eventPublisher,
-            ILogger<AddPageCommandHandler> logger)
+        public AddPageCommandHandler(IBoardRepository boardRepository, IDomainEventPublisher eventPublisher, ILogger<AddPageCommandHandler> logger)
         {
             _boardRepository = boardRepository;
             _eventPublisher = eventPublisher;

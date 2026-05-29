@@ -48,7 +48,6 @@ namespace Linia.Application.Queries.GetBoard
                     }).ToList()
                 }).ToList()
             };
-
         }
     }
 }

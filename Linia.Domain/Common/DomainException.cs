@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Linia.Domain.Common
+﻿namespace Linia.Domain.Common
 {
     public class DomainException : Exception
     {

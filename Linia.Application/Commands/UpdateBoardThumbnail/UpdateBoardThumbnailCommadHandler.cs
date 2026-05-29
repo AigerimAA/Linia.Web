@@ -10,9 +10,7 @@ namespace Linia.Application.Commands.UpdateBoardThumbnail
         private readonly IBoardRepository _boardRepository;
         private readonly ILogger<UpdateBoardThumbnailCommandHandler> _logger;
 
-        public UpdateBoardThumbnailCommandHandler(
-            IBoardRepository boardRepository,
-            ILogger<UpdateBoardThumbnailCommandHandler> logger)
+        public UpdateBoardThumbnailCommandHandler(IBoardRepository boardRepository, ILogger<UpdateBoardThumbnailCommandHandler> logger)
         {
             _boardRepository = boardRepository;
             _logger = logger;
@@ -29,9 +27,7 @@ namespace Linia.Application.Commands.UpdateBoardThumbnail
                 throw new ForbiddenException($"User {request.RequestedBy} cannot edit this board");
 
             board.UpdateThumbnail(request.ThumbnailUrl);
-
             await _boardRepository.UpdateAsync(board, cancellationToken);
-
             return true;
         }
     }

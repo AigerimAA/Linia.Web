@@ -1,7 +1,5 @@
 ﻿using Linia.Domain.Common;
 using Linia.Domain.Enums;
-using Linia.Domain.Events;
-using Linia.Domain.ValueObjects;
 
 namespace Linia.Domain.Entities
 {
@@ -17,8 +15,7 @@ namespace Linia.Domain.Entities
         
 
         private Element() { }
-        public Element(Guid pageId, ElementType type, string jsonData,
-                string authorNickname, int zIndex = 0)
+        public Element(Guid pageId, ElementType type, string jsonData, string authorNickname, int zIndex = 0)
         {
             if (string.IsNullOrWhiteSpace(jsonData))
                 throw new DomainException("JsonData cannot be empty");

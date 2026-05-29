@@ -22,8 +22,7 @@ namespace Linia.Domain.Entities
             Order = order;
         }
 
-        public Element AddElement(ElementType type, string jsonData,
-                string authorNickname, int zIndex = 0)
+        public Element AddElement(ElementType type, string jsonData, string authorNickname, int zIndex = 0)
         {
             if (string.IsNullOrWhiteSpace(jsonData))
                 throw new DomainException("JsonData cannot be empty");

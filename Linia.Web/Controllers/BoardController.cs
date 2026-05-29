@@ -7,7 +7,6 @@ using Linia.Application.DTOs;
 using Linia.Application.Interfaces;
 using Linia.Application.Queries.GetBoard;
 using Linia.Application.Queries.GetBoardList;
-using Linia.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

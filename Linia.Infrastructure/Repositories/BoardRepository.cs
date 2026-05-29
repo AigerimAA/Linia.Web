@@ -75,8 +75,7 @@ namespace Linia.Infrastructure.Repositories
         public async Task SaveMemberAsync(Guid boardId, string nickname, UserRole role, CancellationToken ct = default)
         {
             var exists = await _context.Set<Member>()
-                .AnyAsync(m => m.BoardId == boardId &&
-                          m.Nickname.ToLower() == nickname.ToLower(), ct);
+                .AnyAsync(m => m.BoardId == boardId && m.Nickname.ToLower() == nickname.ToLower(), ct);
 
             if (!exists)
             {

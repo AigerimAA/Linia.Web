@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Linia.Domain.Common;
+﻿using Linia.Domain.Common;
 
 namespace Linia.Domain.Events
 {

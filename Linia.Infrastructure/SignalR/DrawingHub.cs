@@ -5,7 +5,6 @@ using Linia.Application.DTOs;
 using Linia.Application.Interfaces;
 using Linia.Domain.Common;
 using Linia.Domain.Enums;
-using Linia.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -57,9 +56,7 @@ namespace Linia.Infrastructure.SignalR
                 };
 
                 _logger.LogInformation("Element {ElementId} drawn by {User}", elementId, nickname);
-
                 await Clients.Group(request.BoardId.ToString()).ReceiveElement(elementDto);
-
                 await Clients.Caller.ElementDrawn(elementId);
             }
             catch (Exception ex) when (ex is ForbiddenException or DomainException)

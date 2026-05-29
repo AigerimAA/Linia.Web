@@ -2,8 +2,6 @@
 using Linia.Domain.Entities;
 using Linia.Domain.Enums;
 using Linia.Domain.Events;
-using System.Linq;
-using Linia.Domain.ValueObjects;
 
 namespace Linia.Domain.Aggregates
 {
@@ -54,8 +52,7 @@ namespace Linia.Domain.Aggregates
             if (string.IsNullOrWhiteSpace(nickname) || nickname.Length > 50)
                 throw new DomainException("Invalid nickname");
 
-            var existing = _members.FirstOrDefault(m =>
-                m.Nickname.Equals(nickname, StringComparison.OrdinalIgnoreCase));
+            var existing = _members.FirstOrDefault(m => m.Nickname.Equals(nickname, StringComparison.OrdinalIgnoreCase));
             if (existing != null) return existing;
 
             var member = new Member(Id, nickname, role);
@@ -63,18 +60,12 @@ namespace Linia.Domain.Aggregates
             AddDomainEvent(new MemberJoinedEvent(Id, nickname));
             return member;
         }
-        public Element AddElementToPage(Guid pageId, ElementType type,
-            string jsonData, string authorNickname, int zIndex = 0)
+        public Element AddElementToPage(Guid pageId, ElementType type, string jsonData, string authorNickname, int zIndex = 0)
         {
-            var page = _pages.FirstOrDefault(p => p.Id == pageId)
-                ?? throw new DomainException("Page not found");
-
+            var page = _pages.FirstOrDefault(p => p.Id == pageId) ?? throw new DomainException("Page not found");
             var element = page.AddElement(type, jsonData, authorNickname, zIndex);
 
-            AddDomainEvent(new ElementAddedEvent(
-                Id, pageId, element.Id, jsonData, authorNickname, type, zIndex, element.CreatedAt
-            ));
-
+            AddDomainEvent(new ElementAddedEvent(Id, pageId, element.Id, jsonData, authorNickname, type, zIndex, element.CreatedAt));
             return element; 
         }
         public bool TryChangeMemberRole(string targetNickname, UserRole newRole, string requestedBy)
@@ -82,8 +73,7 @@ namespace Linia.Domain.Aggregates
             if (!CanUserManage(requestedBy))
                 throw new DomainException("Only admin can change roles");
 
-            var member = _members.FirstOrDefault(m =>
-                m.Nickname.Equals(targetNickname, StringComparison.OrdinalIgnoreCase));
+            var member = _members.FirstOrDefault(m => m.Nickname.Equals(targetNickname, StringComparison.OrdinalIgnoreCase));
             if (member == null) return false;
 
             member.ChangeRole(newRole);

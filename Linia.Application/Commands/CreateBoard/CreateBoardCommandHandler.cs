@@ -1,7 +1,5 @@
 ﻿using Linia.Application.Interfaces;
 using Linia.Domain.Aggregates;
-using Linia.Domain.Entities;
-using Linia.Domain.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
 

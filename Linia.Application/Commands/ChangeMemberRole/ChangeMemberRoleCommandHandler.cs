@@ -11,9 +11,7 @@ namespace Linia.Application.Commands.ChangeMemberRole
         private readonly IBoardRepository _boardRepository;
         private readonly ILogger<ChangeMemberRoleCommandHandler> _logger;
 
-        public ChangeMemberRoleCommandHandler(
-            IBoardRepository boardRepository,
-            ILogger<ChangeMemberRoleCommandHandler> logger)
+        public ChangeMemberRoleCommandHandler(IBoardRepository boardRepository, ILogger<ChangeMemberRoleCommandHandler> logger)
         {
             _boardRepository = boardRepository;
             _logger = logger;
@@ -21,8 +19,7 @@ namespace Linia.Application.Commands.ChangeMemberRole
 
         public async Task<bool> Handle(ChangeMemberRoleCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Changing role of {Target} on board {BoardId} by {User}",
-                request.TargetNickname, request.BoardId, request.RequestedBy);
+            _logger.LogInformation("Changing role of {Target} on board {BoardId} by {User}", request.TargetNickname, request.BoardId, request.RequestedBy);
 
             var board = await _boardRepository.GetByIdAsync(request.BoardId, cancellationToken);
             if (board == null) throw new NotFoundException("Board not found");
@@ -31,7 +28,6 @@ namespace Linia.Application.Commands.ChangeMemberRole
 
             if (!board.TryChangeMemberRole(request.TargetNickname, newRole, request.RequestedBy))
                 throw new NotFoundException("Member not found");
-
             await _boardRepository.UpdateAsync(board, cancellationToken);
 
             return true;

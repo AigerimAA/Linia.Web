@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Linia.Domain.Enums;
+﻿using Linia.Domain.Enums;
 
 namespace Linia.Domain.Entities
 {

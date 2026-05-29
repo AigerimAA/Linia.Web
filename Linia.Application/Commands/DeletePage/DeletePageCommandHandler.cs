@@ -11,10 +11,7 @@ namespace Linia.Application.Commands.DeletePage
         private readonly IDomainEventPublisher _eventPublisher;
         private readonly ILogger<DeletePageCommandHandler> _logger;
 
-        public DeletePageCommandHandler(
-            IBoardRepository boardRepository,
-            IDomainEventPublisher eventPublisher,
-            ILogger<DeletePageCommandHandler> logger)
+        public DeletePageCommandHandler(IBoardRepository boardRepository, IDomainEventPublisher eventPublisher, ILogger<DeletePageCommandHandler> logger)
         {
             _boardRepository = boardRepository;
             _eventPublisher = eventPublisher;
@@ -23,12 +20,10 @@ namespace Linia.Application.Commands.DeletePage
 
         public async Task<bool> Handle(DeletePageCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Deleting page {PageId} from board {BoardId} by {User}",
-                request.PageId, request.BoardId, request.RequestedBy);
+            _logger.LogInformation("Deleting page {PageId} from board {BoardId} by {User}", request.PageId, request.BoardId, request.RequestedBy);
 
             var board = await _boardRepository.GetByIdAsync(request.BoardId, cancellationToken);
             if (board == null) throw new NotFoundException("Board not found");
-
             if (!board.CanUserEdit(request.RequestedBy))
                 throw new ForbiddenException($"User {request.RequestedBy} cannot edit this board");
 
@@ -38,7 +33,6 @@ namespace Linia.Application.Commands.DeletePage
             await _boardRepository.UpdateAsync(board, cancellationToken);
             await _eventPublisher.PublishAsync(board.DomainEvents);
             board.ClearDomainEvents();
-
             return true;
         }
     }

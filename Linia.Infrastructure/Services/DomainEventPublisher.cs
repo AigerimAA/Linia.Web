@@ -2,8 +2,6 @@
 using Linia.Application.Interfaces;
 using Linia.Domain.Common;
 using Linia.Domain.Events;
-using Linia.Infrastructure.SignalR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace Linia.Infrastructure.Services

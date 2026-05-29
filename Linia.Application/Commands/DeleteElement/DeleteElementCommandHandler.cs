@@ -11,8 +11,7 @@ namespace Linia.Application.Commands.DeleteElement
         private readonly IDomainEventPublisher _eventPublisher;
         private readonly ILogger<DeleteElementCommandHandler> _logger;
 
-        public DeleteElementCommandHandler(IBoardRepository boardRepository,
-            IDomainEventPublisher eventPublisher, ILogger<DeleteElementCommandHandler> logger)
+        public DeleteElementCommandHandler(IBoardRepository boardRepository, IDomainEventPublisher eventPublisher, ILogger<DeleteElementCommandHandler> logger)
         {
             _boardRepository = boardRepository;
             _eventPublisher = eventPublisher;
@@ -35,7 +34,6 @@ namespace Linia.Application.Commands.DeleteElement
             await _boardRepository.UpdateAsync(board, cancellationToken);
             await _eventPublisher.PublishAsync(board.DomainEvents);
             board.ClearDomainEvents();
-
             return true;
         }
     }

@@ -1,7 +1,5 @@
 ﻿using Linia.Application.Common.Exceptions;
 using Linia.Application.Interfaces;
-using Linia.Domain.Entities;
-using Linia.Domain.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -13,10 +11,7 @@ namespace Linia.Application.Commands.ClearBoard
         private readonly IDomainEventPublisher _eventPublisher;
         private readonly ILogger<ClearBoardCommandHandler> _logger;
 
-        public ClearBoardCommandHandler(
-            IBoardRepository boardRepository,
-            IDomainEventPublisher eventPublisher,
-            ILogger<ClearBoardCommandHandler> logger)
+        public ClearBoardCommandHandler(IBoardRepository boardRepository, IDomainEventPublisher eventPublisher, ILogger<ClearBoardCommandHandler> logger)
         {
             _boardRepository = boardRepository;
             _eventPublisher = eventPublisher;
@@ -32,7 +27,6 @@ namespace Linia.Application.Commands.ClearBoard
 
             if (!board.CanUserEdit(request.RequestedBy))
                 throw new ForbiddenException($"User {request.RequestedBy} cannot edit");
-
             board.ClearPage(request.PageId, request.RequestedBy);
 
             await _boardRepository.UpdateAsync(board, cancellationToken);

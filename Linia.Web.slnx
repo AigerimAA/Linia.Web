@@ -1,5 +1,4 @@
 <Solution>
-  <Folder Name="/tests/" />
   <Folder Name="/Элементы решения/">
     <File Path=".gitignore" />
   </Folder>
