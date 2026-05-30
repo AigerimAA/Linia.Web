@@ -280,7 +280,8 @@ export const useCanvas = (
 
   const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
-    const existingObjects = canvasRef.current.getObjects();
+
+    const existingObjects = [...canvasRef.current.getObjects()];
     existingObjects.forEach((obj: any) => canvasRef.current.remove(obj));
     canvasRef.current.backgroundColor = '#ffffff';
 

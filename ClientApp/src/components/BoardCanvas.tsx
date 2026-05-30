@@ -4,6 +4,8 @@ import { useCanvas } from '../hooks/useCanvas';
 import { Toolbar } from './Toolbar/Toolbar';
 import { CursorOverlay } from './CursorOverlay/CursorOverlay';
 import { CustomThemeToggle } from './Common/CustomThemeToggle';
+import { ConfirmModal } from './Common/ConfirmModal';
+import { useState } from 'react';
 
 interface BoardCanvasProps {
   boardId: string;
@@ -83,6 +85,8 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [sendCursor, isConnected]);
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   const handleExport = () => {
     const dataUrl = exportToJPEG();
     const link = document.createElement('a');
@@ -92,16 +96,16 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   };
 
   const handleClear = useCallback(async () => {
-  if (!currentPageId) return;
-  try {
-    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/boards/${boardId}/pages/${currentPageId}/clear`, {
-      method: 'POST',
-      headers: { 'X-Nickname': encodeURIComponent(nickname) }
-    });
-    clearCanvas();
-  } catch (err) {
-    console.error('Clear failed:', err);
-  }
+    if (!currentPageId) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/board/${boardId}/pages/${currentPageId}/clear`, {
+        method: 'POST',
+        headers: { 'X-Nickname': encodeURIComponent(nickname) }
+      });
+      clearCanvas();
+    } catch (err) {
+      console.error('Clear failed:', err);
+    }
   }, [currentPageId, boardId, nickname, clearCanvas]);
 
   if (isLoading || !currentPageId) {
@@ -127,7 +131,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
         onColorChange={setSelectedColor}
         strokeWidth={strokeWidth}
         onStrokeWidthChange={setStrokeWidth}
-        onClear={handleClear}
+        onClear={() => setShowClearConfirm(true)}
         onExport={handleExport}
         theme={theme}
         onThemeToggle={onToggleTheme}
@@ -147,6 +151,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
           {nickname} {isConnected ? '🟢' : '🔴'}
         </div>
       </div>
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onConfirm={() => { setShowClearConfirm(false); handleClear(); }}
+        onCancel={() => setShowClearConfirm(false)}
+        title="Clear board"
+        message="This will permanently delete all elements on this page. This action cannot be undone."
+      />
     </div>
   );
 };
