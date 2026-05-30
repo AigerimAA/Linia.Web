@@ -4,6 +4,7 @@ using Linia.Infrastructure.Repositories;
 using Linia.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 namespace Linia.Infrastructure;
 
@@ -12,7 +13,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, bool isDevelopment = true)
     {
         services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(connectionString));
+            options.UseNpgsql(connectionString));
 
         services.AddScoped<IBoardRepository, BoardRepository>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
