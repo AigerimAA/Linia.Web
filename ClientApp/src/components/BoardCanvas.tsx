@@ -91,6 +91,19 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     link.click();
   };
 
+  const handleClear = useCallback(async () => {
+  if (!currentPageId) return;
+  try {
+    await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/boards/${boardId}/pages/${currentPageId}/clear`, {
+      method: 'POST',
+      headers: { 'X-Nickname': nickname }
+    });
+    clearCanvas();
+  } catch (err) {
+    console.error('Clear failed:', err);
+  }
+  }, [currentPageId, boardId, nickname, clearCanvas]);
+
   if (isLoading || !currentPageId) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -101,19 +114,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
       </div>
     );
   }
-
-  const handleClear = useCallback(async () => {
-    if (!currentPageId) return;
-    try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/boards/${boardId}/pages/${currentPageId}/clear`, {
-        method: 'POST',
-        headers: { 'X-Nickname': nickname }
-      });
-      clearCanvas();
-    } catch (err) {
-      console.error('Clear failed:', err);
-    }
-    }, [currentPageId, boardId, nickname, clearCanvas]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
