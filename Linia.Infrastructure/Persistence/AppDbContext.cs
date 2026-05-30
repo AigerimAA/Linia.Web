@@ -2,7 +2,6 @@
 using Linia.Domain.Aggregates;
 using Linia.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Linia.Infrastructure.Persistence
 {

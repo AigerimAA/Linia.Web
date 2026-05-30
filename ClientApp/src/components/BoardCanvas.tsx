@@ -69,7 +69,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     const timer = setTimeout(() => {
       loadInitialElements(elements);
       elementsLoadedRef.current = true;
-    }, 300);
+    }, 800);
     return () => clearTimeout(timer);
   }, [elements, loadInitialElements]);
 
