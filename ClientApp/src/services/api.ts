@@ -11,7 +11,7 @@ const api = axios.create({
 });
 
 export const setAuthHeader = (nickname: string) => {
-  api.defaults.headers.common['X-Nickname'] = nickname;
+  api.defaults.headers.common['X-Nickname'] = encodeURIComponent(nickname);
 };
 
 export const boardApi = {

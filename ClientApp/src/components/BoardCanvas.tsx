@@ -96,7 +96,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   try {
     await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/boards/${boardId}/pages/${currentPageId}/clear`, {
       method: 'POST',
-      headers: { 'X-Nickname': nickname }
+      headers: { 'X-Nickname': encodeURIComponent(nickname) }
     });
     clearCanvas();
   } catch (err) {

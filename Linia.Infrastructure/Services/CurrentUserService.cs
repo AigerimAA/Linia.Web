@@ -12,9 +12,20 @@ namespace Linia.Infrastructure.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public string Nickname =>
-            _httpContextAccessor.HttpContext?.Request.Query["nickname"].FirstOrDefault()
-            ?? _httpContextAccessor.HttpContext?.Request.Headers["X-Nickname"].FirstOrDefault()
-            ?? "Anonymous";
+        public string Nickname
+        {
+            get
+            {
+                var fromQuery = _httpContextAccessor.HttpContext?.Request.Query["nickname"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(fromQuery))
+                    return Uri.UnescapeDataString(fromQuery);
+
+                var fromHeader = _httpContextAccessor.HttpContext?.Request.Headers["X-Nickname"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(fromHeader))
+                    return Uri.UnescapeDataString(fromHeader);
+
+                return "Anonymous";
+            }
+        }
     }
 }
