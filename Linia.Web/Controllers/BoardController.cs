@@ -1,5 +1,6 @@
 ﻿using Linia.API.Requests;
 using Linia.Application.Commands.ChangeMemberRole;
+using Linia.Application.Commands.ClearBoard;
 using Linia.Application.Commands.CreateBoard;
 using Linia.Application.Commands.DeleteBoard;
 using Linia.Application.Commands.UpdateBoardThumbnail;
@@ -79,6 +80,16 @@ namespace Linia.API.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteBoardCommand(id));
+            return NoContent();
+        }
+
+        [HttpPost("{id}/pages/{pageId}/clear")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> ClearPage(Guid id, Guid pageId)
+        {
+            var command = new ClearBoardCommand(id, pageId, _currentUser.Nickname);
+            await _mediator.Send(command);
             return NoContent();
         }
     }

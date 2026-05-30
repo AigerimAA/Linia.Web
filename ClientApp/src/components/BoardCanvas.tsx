@@ -102,6 +102,19 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     );
   }
 
+  const handleClear = useCallback(async () => {
+    if (!currentPageId) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/boards/${boardId}/pages/${currentPageId}/clear`, {
+        method: 'POST',
+        headers: { 'X-Nickname': nickname }
+      });
+      clearCanvas();
+    } catch (err) {
+      console.error('Clear failed:', err);
+    }
+    }, [currentPageId, boardId, nickname, clearCanvas]);
+
   return (
     <div className="relative w-full h-full overflow-hidden">
       <canvas id="drawing-canvas" style={{ display: 'block', position: 'fixed', top: 0, left: 0 }} />
@@ -114,7 +127,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
         onColorChange={setSelectedColor}
         strokeWidth={strokeWidth}
         onStrokeWidthChange={setStrokeWidth}
-        onClear={clearCanvas}
+        onClear={handleClear}
         onExport={handleExport}
         theme={theme}
         onThemeToggle={onToggleTheme}
