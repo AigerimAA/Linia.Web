@@ -67,13 +67,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   }, [assignElementId]);
 
   useEffect(() => {
-    if (elementsLoadedRef.current || elements.length === 0) return;
+    if (elements.length === 0) return;
     const timer = setTimeout(() => {
       loadInitialElements(elements);
       elementsLoadedRef.current = true;
     }, 800);
     return () => clearTimeout(timer);
-  }, [elements, loadInitialElements]);
+  }, [elements.length, loadInitialElements]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

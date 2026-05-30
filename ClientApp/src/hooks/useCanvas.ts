@@ -143,6 +143,7 @@ export const useCanvas = (
         if (tool === 'pen') return;
 
         canvas.isDrawingMode = false;
+        canvas.renderAll();
 
         if (tool === 'eraser') {
           const activeCanvas = canvasRef.current;
@@ -206,7 +207,10 @@ export const useCanvas = (
           return;
         }
 
-        if (currentShape) canvas.add(currentShape);
+        if (currentShape) {
+          canvas.add(currentShape);
+          canvas.renderAll();
+        }
       });
 
       canvas.on('mouse:move', (opt: any) => {
