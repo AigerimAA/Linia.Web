@@ -12,7 +12,17 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString, bool isDevelopment = true)
     {
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        {
+            var connStr = connectionString;
+            if (connStr != null && connStr.StartsWith("postgresql://") ||
+                connStr != null && connStr.StartsWith("postgres://"))
+            {
+                var uri = new Uri(connStr);
+                var userInfo = uri.UserInfo.Split(':');
+                connStr = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+            }
+            options.UseNpgsql(connStr);
+        });
 
         services.AddScoped<IBoardRepository, BoardRepository>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
