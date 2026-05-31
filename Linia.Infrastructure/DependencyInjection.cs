@@ -4,7 +4,6 @@ using Linia.Infrastructure.Repositories;
 using Linia.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 namespace Linia.Infrastructure;
 
