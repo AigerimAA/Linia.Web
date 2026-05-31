@@ -73,7 +73,7 @@ namespace Linia.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     PageId = table.Column<Guid>(type: "uuid", nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
-                    JsonData = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    JsonData = table.Column<string>(type: "text", nullable: false),
                     AuthorNickname = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ZIndex = table.Column<int>(type: "integer", nullable: false)

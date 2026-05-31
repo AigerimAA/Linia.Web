@@ -70,7 +70,7 @@ namespace Linia.Infrastructure.Migrations
 
                     b.Property<string>("JsonData")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("PageId")
                         .HasColumnType("uuid");

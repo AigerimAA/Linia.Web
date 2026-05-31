@@ -9,7 +9,7 @@ namespace Linia.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Element> builder)
         {
             builder.HasKey(e => e.Id);
-            builder.Property(e => e.JsonData).HasColumnType("nvarchar(max)").IsRequired();
+            builder.Property(e => e.JsonData).HasColumnType("text").IsRequired();
             builder.Property(e => e.AuthorNickname).IsRequired().HasMaxLength(50);
             builder.Property(e => e.Type).IsRequired();
 
