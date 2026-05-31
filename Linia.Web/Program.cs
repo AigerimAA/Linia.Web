@@ -2,9 +2,11 @@ using System.Text.Json;
 using Linia.API.Middleware;
 using Linia.Application;
 using Linia.Infrastructure;
+using Linia.Infrastructure.Persistence;
 using Linia.Infrastructure.SignalR;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Linia.Web
 {
@@ -21,11 +23,15 @@ namespace Linia.Web
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            var allowedOrigins = builder.Configuration
+                .GetSection("AllowedOrigins").Get<string[]>()
+                ?? new[] { "http://localhost:5173" };
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("ReactApp", policy =>
                 {
-                    policy.WithOrigins("http://localhost:5173")
+                    policy.WithOrigins(allowedOrigins)
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();
@@ -44,14 +50,19 @@ namespace Linia.Web
 
             builder.Services.AddApplication();
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            builder.Services.AddInfrastructure(connectionString, builder.Environment.IsDevelopment());
+            builder.Services.AddInfrastructure(connectionString!, builder.Environment.IsDevelopment());
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.Migrate();
+            }
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
             app.UseRouting();
             app.UseCors("ReactApp");
-            app.UseHttpsRedirection();
             app.UseAuthorization();
 
             if (app.Environment.IsDevelopment())
