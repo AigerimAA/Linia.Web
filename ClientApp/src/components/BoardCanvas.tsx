@@ -141,20 +141,21 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
         theme={theme}
         onThemeToggle={onToggleTheme}
       />
-      <div className="fixed top-4 left-4 z-50 flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg px-3 py-2 shadow-md border border-gray-200 dark:border-gray-700">
-          <img src="/logo.svg" alt="Linia" className="w-6 h-6" />
-          <span className="font-semibold text-gray-800 dark:text-white">Linia</span>
-        </div>
-        <button
-          onClick={onLeave}
-          className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-        >
-        </button>
-        <div className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md">
-          {nickname} {isConnected ? '🟢' : '🔴'}
-        </div>
+      <div className="fixed top-4 left-4 z-[9999] flex items-center gap-3">
+      <div className="flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg px-3 py-2 shadow-md border border-gray-200 dark:border-gray-700">
+        <img src="/logo.svg" alt="Linia" className="w-6 h-6" />
+        <span className="font-semibold text-gray-800 dark:text-white">Linia</span>
       </div>
+      <button
+        onClick={onLeave}
+        className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+      >
+        ← Boards
+      </button>
+      <div className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md">
+        {nickname} {isConnected ? '🟢' : '🔴'}
+      </div>
+    </div>
       <ConfirmModal
         isOpen={showClearConfirm}
         onConfirm={() => { setShowClearConfirm(false); handleClear(); }}
