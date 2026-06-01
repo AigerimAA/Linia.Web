@@ -61,6 +61,7 @@ namespace Linia.Web
             }
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
+            app.UseWebSockets();
             app.UseRouting();
             app.UseCors("ReactApp");
             app.UseAuthorization();
