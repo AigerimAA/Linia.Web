@@ -19,9 +19,9 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   boardId, nickname, theme, onToggleTheme, onLeave,
 }) => {
   const currentPageIdRef = useRef<string | null>(null);
-  const elementsLoadedRef = useRef(false);
   const addElementToCanvasRef = useRef<((el: any) => void) | null>(null);
   const assignElementIdRef = useRef<((id: string) => void) | null>(null);
+  const initialLoadDoneRef = useRef(false);
 
   const {
     isConnected, elements, cursors, currentPageId, isLoading, sendElement, sendCursor, deleteElement,
@@ -51,15 +51,14 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     isCanvasReady,
   } = useCanvas(handleElementAdded, deleteElement, false);
 
+  // Сбрасываем при смене борда
+  useEffect(() => {
+    initialLoadDoneRef.current = false;
+  }, [boardId]);
+
   useEffect(() => {
     currentPageIdRef.current = currentPageId;
   }, [currentPageId]);
-
-  useEffect(() => {
-    elementsLoadedRef.current = false;
-    initialLoadDoneRef.current = false;
-    prevElementsLengthRef.current = 0;  
-  }, [boardId]);
 
   useEffect(() => {
     addElementToCanvasRef.current = addElementToCanvas;
@@ -69,21 +68,16 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     assignElementIdRef.current = assignElementId;
   }, [assignElementId]);
 
-  const initialLoadDoneRef = useRef(false);
-  const prevElementsLengthRef = useRef(0);
-
+  // Загружаем элементы ТОЛЬКО ОДИН РАЗ при входе
   useEffect(() => {
-      if (elements.length === 0 || !isCanvasReady) return;
-      if (elements.length <= prevElementsLengthRef.current) {
-          prevElementsLengthRef.current = elements.length;
-          return;
-      }
-      prevElementsLengthRef.current = elements.length;
-      const timer = setTimeout(() => {
-          loadInitialElements(elements);
-      }, 300);
-      return () => clearTimeout(timer);
-  }, [elements, isCanvasReady, loadInitialElements]);
+    if (!isCanvasReady || initialLoadDoneRef.current) return;
+    if (elements.length === 0) return;
+    const timer = setTimeout(() => {
+      loadInitialElements(elements);
+      initialLoadDoneRef.current = true;
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [isCanvasReady, elements, loadInitialElements]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
