@@ -149,7 +149,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
           onClick={onLeave}
           className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
         >
-          ← Boards
         </button>
         <div className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md">
           {nickname} {isConnected ? '🟢' : '🔴'}

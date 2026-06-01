@@ -51,6 +51,7 @@ export const useSignalR = (
             .build();
 
           connection.on('ReceiveElement', (element: any) => {
+              console.log('ReceiveElement:', element.authorNickname, 'vs nickname:', nickname, 'match:', element.authorNickname === nickname);
               setElements(prev => prev.some(e => e.id === element.id) ? prev : [...prev, element]);
               if (element.authorNickname !== nickname) {
                   onNewElementRef.current?.(element);
