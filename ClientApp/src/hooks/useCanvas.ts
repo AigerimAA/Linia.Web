@@ -153,7 +153,7 @@ export const useCanvas = (
           const activeCanvas = canvasRef.current;
           if (!activeCanvas) return;
 
-          const pointer = activeCanvas.getPointer(opt.e, false);
+          const pointer = activeCanvas.getPointer(opt.e);
           const objects = activeCanvas.getObjects();
           const eraserRadius = strokeRef.current * 2;
 
