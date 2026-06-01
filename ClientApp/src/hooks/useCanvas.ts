@@ -154,31 +154,19 @@ export const useCanvas = (
           if (!activeCanvas) return;
 
           const pointer = activeCanvas.getPointer(opt.e);
+          const point = new fabric.Point(pointer.x, pointer.y);
           const objects = activeCanvas.getObjects();
-          const eraserRadius = strokeRef.current * 2;
-
-          console.log('Eraser: objects on canvas:', objects.length);
 
           for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
             if (obj === activeCanvas.backgroundImage) continue;
 
-            const bound = obj.getBoundingRect(true, false);
-            const isHit =
-              pointer.x >= bound.left - eraserRadius &&
-              pointer.x <= bound.left + bound.width + eraserRadius &&
-              pointer.y >= bound.top - eraserRadius &&
-              pointer.y <= bound.top + bound.height + eraserRadius;
-
-            if (isHit) {
+            if (obj.containsPoint(point)) {
               const elementId = elementIdMap.current.get(obj);
-              console.log('Eraser hit! elementId:', elementId, 'obj type:', obj.type);
               activeCanvas.remove(obj);
               activeCanvas.requestRenderAll();
               if (elementId) {
                 onElementDeletedRef.current(elementId);
-              } else {
-                console.warn('No elementId found for this object!');
               }
               break;
             }
