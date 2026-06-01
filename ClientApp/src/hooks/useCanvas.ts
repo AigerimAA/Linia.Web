@@ -281,8 +281,12 @@ export const useCanvas = (
 
   const assignElementId = useCallback((elementId: string) => {
     const obj = pendingElementsRef.current.shift();
+    console.log('assignElementId called:', elementId, 'obj:', obj, 'pending queue:', pendingElementsRef.current.length);
     if (obj) {
         elementIdMap.current.set(obj, elementId);
+        console.log('ID assigned to object');
+    } else {
+        console.warn('No pending object to assign ID to!');
     }
 }, []);
 
