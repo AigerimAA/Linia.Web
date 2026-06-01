@@ -59,7 +59,7 @@ export const useSignalR = (
                   onNewElementRef.current?.(element);
               }
           });
-          connection.on('ReceiveElementDeleted', (boardId: string, elementId: string) => {
+          connection.on('ReceiveElementDeleted', (_boardId: string, elementId: string) => {
               setElements(prev => prev.filter(e => e.id !== elementId));
               onElementRemovedRef.current?.(elementId);
           });
