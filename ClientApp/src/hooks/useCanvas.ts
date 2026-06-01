@@ -150,29 +150,36 @@ export const useCanvas = (
         canvas.renderAll();
 
         if (tool === 'eraser') {
-          const activeCanvas = canvasRef.current;
-          if (!activeCanvas) return;
+        const activeCanvas = canvasRef.current;
+        if (!activeCanvas) return;
 
-          const pointer = activeCanvas.getPointer(opt.e);
-          const point = new fabric.Point(pointer.x, pointer.y);
-          const objects = activeCanvas.getObjects();
+        const pointer = activeCanvas.getPointer(opt.e);
+        const objects = activeCanvas.getObjects();
+        const hitRadius = Math.max(strokeRef.current * 3, 10);
 
-          for (let i = objects.length - 1; i >= 0; i--) {
-            const obj = objects[i];
-            if (obj === activeCanvas.backgroundImage) continue;
+        for (let i = objects.length - 1; i >= 0; i--) {
+          const obj = objects[i];
+          if (obj === activeCanvas.backgroundImage) continue;
 
-            if (obj.containsPoint(point)) {
-              const elementId = elementIdMap.current.get(obj);
-              activeCanvas.remove(obj);
-              activeCanvas.requestRenderAll();
-              if (elementId) {
-                onElementDeletedRef.current(elementId);
-              }
-              break;
+          const bound = obj.getBoundingRect(true, true);
+          const isHit =
+            pointer.x >= bound.left - hitRadius &&
+            pointer.x <= bound.left + bound.width + hitRadius &&
+            pointer.y >= bound.top - hitRadius &&
+            pointer.y <= bound.top + bound.height + hitRadius;
+
+          if (isHit) {
+            const elementId = elementIdMap.current.get(obj);
+            activeCanvas.remove(obj);
+            activeCanvas.requestRenderAll();
+            if (elementId) {
+              onElementDeletedRef.current(elementId);
             }
+            break;
           }
-          return;
         }
+        return;
+      }
 
         const pointer = canvas.getPointer(opt.e);
         isDrawingShape = true;
