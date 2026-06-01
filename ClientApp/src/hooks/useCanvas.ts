@@ -347,6 +347,16 @@ export const useCanvas = (
     canvasRef.current.renderAll();
   }, []);
 
+  const removeElementFromCanvas = useCallback((elementId: string) => {
+    if (!canvasRef.current) return;
+    const objects = canvasRef.current.getObjects();
+    const obj = objects.find((o: any) => elementIdMap.current.get(o) === elementId);
+    if (obj) {
+        canvasRef.current.remove(obj);
+        canvasRef.current.renderAll();
+    }
+  }, []);
+
   const exportToJPEG = useCallback((): string => {
     if (!canvasRef.current) return '';
     return canvasRef.current.toDataURL({ format: 'jpeg', quality: 0.9 });
@@ -360,5 +370,6 @@ export const useCanvas = (
     clearCanvas, exportToJPEG,
     assignElementId,
     isCanvasReady,
+    removeElementFromCanvas,
   };
 };

@@ -8,7 +8,8 @@ export const useSignalR = (
   boardId: string | null,
   nickname: string,
   onNewElement?: (element: any) => void,
-  onElementDrawn?: (elementId: string) => void
+  onElementDrawn?: (elementId: string) => void,
+  onElementRemoved?: (elementId: string) => void
 ) => {
   const onNewElementRef = useRef(onNewElement);
   const onElementDrawnRef = useRef(onElementDrawn);
@@ -59,6 +60,7 @@ export const useSignalR = (
           });
           connection.on('ReceiveElementDeleted', (id: string) => {
               setElements(prev => prev.filter(e => e.id !== id));
+              onElementRemoved?.(id);
           });
           connection.on('ReceiveBoardCleared', () => setElements([]));
           connection.on('ReceiveCursor', (cursor: Cursor) => {

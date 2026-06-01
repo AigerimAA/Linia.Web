@@ -29,7 +29,8 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     boardId,
     nickname,
     (newElement) => { addElementToCanvasRef.current?.(newElement); },
-    (elementId) => { assignElementIdRef.current?.(elementId); }
+    (elementId) => { assignElementIdRef.current?.(elementId); },
+    (elementId) => { removeElementFromCanvas(elementId); } 
   );
 
   const handleElementAdded = useCallback((fabricObj: any, backendType: string) => {
@@ -49,6 +50,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     exportToJPEG,
     assignElementId,
     isCanvasReady,
+    removeElementFromCanvas,
   } = useCanvas(handleElementAdded, deleteElement, false);
 
   useEffect(() => {
