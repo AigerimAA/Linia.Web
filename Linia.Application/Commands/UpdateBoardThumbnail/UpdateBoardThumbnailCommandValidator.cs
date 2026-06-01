@@ -10,9 +10,8 @@ namespace Linia.Application.Commands.UpdateBoardThumbnail
             RuleFor(x => x.RequestedBy).NotEmpty().MaximumLength(50);
             RuleFor(x => x.ThumbnailUrl)
                 .NotEmpty()
-                .MaximumLength(500)
-                .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))
-                .WithMessage("ThumbnailUrl must be a valid URL");
+                .Must(url => url.StartsWith("data:image/") || Uri.TryCreate(url, UriKind.Absolute, out _))
+                .WithMessage("Invalid thumbnail URL");
 
         }
     }

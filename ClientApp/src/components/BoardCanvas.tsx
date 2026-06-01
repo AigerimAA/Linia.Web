@@ -120,6 +120,23 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     }
   }, [currentPageId, boardId, nickname, clearCanvas]);
 
+  const handleLeave = async () => {
+  const dataUrl = exportToJPEG();
+  if (dataUrl) {
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5006'}/api/board/${boardId}/thumbnail`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Nickname': encodeURIComponent(nickname) 
+        },
+        body: JSON.stringify({ thumbnailUrl: dataUrl })
+      });
+    } catch {}
+  }
+  onLeave();
+};
+
   if (isLoading || !currentPageId) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -154,7 +171,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
         <span className="font-semibold text-gray-800 dark:text-white">Linia</span>
       </div>
       <button
-        onClick={onLeave}
+        onClick={handleLeave}
         className="px-3 py-1.5 text-sm bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
       >
         ← Boards
