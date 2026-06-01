@@ -57,6 +57,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
 
   useEffect(() => {
     elementsLoadedRef.current = false;
+    initialLoadDoneRef.current = false;
   }, [boardId]);
 
   useEffect(() => {
@@ -67,10 +68,13 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     assignElementIdRef.current = assignElementId;
   }, [assignElementId]);
 
+  const initialLoadDoneRef = useRef(false);
+
   useEffect(() => {
-    if (elements.length === 0 || !isCanvasReady) return;
+    if (elements.length === 0 || !isCanvasReady || initialLoadDoneRef.current) return;
     const timer = setTimeout(() => {
       loadInitialElements(elements);
+      initialLoadDoneRef.current = true;
     }, 300);
     return () => clearTimeout(timer);
   }, [elements, isCanvasReady, loadInitialElements]);
