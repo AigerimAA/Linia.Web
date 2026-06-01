@@ -1,6 +1,6 @@
 # Linia — Collaborative Drawing Board
 
-A real-time collaborative drawing board built with ASP.NET Core and React.
+A real-time collaborative drawing board.
 
 🔗 **[Live Demo](https://triumphant-intuition-production-741d.up.railway.app)**
 
