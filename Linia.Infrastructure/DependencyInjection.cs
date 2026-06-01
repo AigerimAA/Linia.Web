@@ -14,8 +14,7 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
         {
             var connStr = connectionString;
-            if (connStr != null && connStr.StartsWith("postgresql://") ||
-                connStr != null && connStr.StartsWith("postgres://"))
+            if (connStr != null && !string.IsNullOrEmpty(connStr) && (connStr.StartsWith("postgresql://") || connStr.StartsWith("postgres://")))
             {
                 var uri = new Uri(connStr);
                 var userInfo = uri.UserInfo.Split(':');
