@@ -170,14 +170,11 @@ export const useCanvas = (
 
           if (isHit) {
             const elementId = elementIdMap.current.get(obj);
-            console.log('HIT! elementId:', elementId, 'obj type:', obj.type);
             activeCanvas.remove(obj);
             activeCanvas.requestRenderAll();
             if (elementId) {
               onElementDeletedRef.current(elementId);
-            } else {
-              console.warn('NO ID - element not deleted from server!');
-            }
+            } 
             break;
           }
         }
