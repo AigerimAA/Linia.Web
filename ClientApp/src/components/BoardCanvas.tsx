@@ -51,7 +51,6 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     isCanvasReady,
   } = useCanvas(handleElementAdded, deleteElement, false);
 
-  // Сбрасываем при смене борда
   useEffect(() => {
     initialLoadDoneRef.current = false;
   }, [boardId]);
@@ -68,16 +67,18 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     assignElementIdRef.current = assignElementId;
   }, [assignElementId]);
 
-  // Загружаем элементы ТОЛЬКО ОДИН РАЗ при входе
+  const elementsRef = useRef(elements);
+  useEffect(() => { elementsRef.current = elements; }, [elements]);
+
   useEffect(() => {
-    if (!isCanvasReady || initialLoadDoneRef.current) return;
-    if (elements.length === 0) return;
-    const timer = setTimeout(() => {
-      loadInitialElements(elements);
-      initialLoadDoneRef.current = true;
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [isCanvasReady, elements, loadInitialElements]);
+      if (!isCanvasReady || initialLoadDoneRef.current) return;
+      if (elementsRef.current.length === 0) return;
+      const timer = setTimeout(() => {
+        loadInitialElements(elementsRef.current);
+        initialLoadDoneRef.current = true;
+      }, 300);
+      return () => clearTimeout(timer);
+    }, [isCanvasReady, loadInitialElements]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
