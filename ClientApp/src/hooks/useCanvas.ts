@@ -157,6 +157,8 @@ export const useCanvas = (
           const objects = activeCanvas.getObjects();
           const eraserRadius = strokeRef.current * 2;
 
+          console.log('Eraser: objects on canvas:', objects.length);
+
           for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
             if (obj === activeCanvas.backgroundImage) continue;
@@ -170,10 +172,13 @@ export const useCanvas = (
 
             if (isHit) {
               const elementId = elementIdMap.current.get(obj);
+              console.log('Eraser hit! elementId:', elementId, 'obj type:', obj.type);
               activeCanvas.remove(obj);
               activeCanvas.requestRenderAll();
               if (elementId) {
                 onElementDeletedRef.current(elementId);
+              } else {
+                console.warn('No elementId found for this object!');
               }
               break;
             }
