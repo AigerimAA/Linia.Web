@@ -13,6 +13,7 @@ export const useSignalR = (
 ) => {
   const onNewElementRef = useRef(onNewElement);
   const onElementDrawnRef = useRef(onElementDrawn);
+  const onElementRemovedRef = useRef(onElementRemoved);
   const connectionRef = useRef<HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [elements, setElements] = useState<BoardElement[]>([]);
@@ -22,6 +23,7 @@ export const useSignalR = (
 
   useEffect(() => { onNewElementRef.current = onNewElement; }, [onNewElement]);
   useEffect(() => { onElementDrawnRef.current = onElementDrawn; }, [onElementDrawn]);
+  useEffect(() => { onElementRemovedRef.current = onElementRemoved; }, [onElementRemoved]);
 
   useEffect(() => {
     if (!boardId || !nickname) return;
@@ -52,7 +54,6 @@ export const useSignalR = (
             .build();
 
           connection.on('ReceiveElement', (element: any) => {
-              console.log('ReceiveElement:', element.authorNickname, 'vs nickname:', nickname, 'match:', element.authorNickname === nickname);
               setElements(prev => prev.some(e => e.id === element.id) ? prev : [...prev, element]);
               if (element.authorNickname !== nickname) {
                   onNewElementRef.current?.(element);
@@ -60,7 +61,7 @@ export const useSignalR = (
           });
           connection.on('ReceiveElementDeleted', (id: string) => {
               setElements(prev => prev.filter(e => e.id !== id));
-              onElementRemoved?.(id);
+              onElementRemovedRef.current?.(id);
           });
           connection.on('ReceiveBoardCleared', () => setElements([]));
           connection.on('ReceiveCursor', (cursor: Cursor) => {

@@ -22,6 +22,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   const addElementToCanvasRef = useRef<((el: any) => void) | null>(null);
   const assignElementIdRef = useRef<((id: string) => void) | null>(null);
   const initialLoadDoneRef = useRef(false);
+  const removeElementFromCanvasRef = useRef<((id: string) => void) | null>(null);
 
   const {
     isConnected, elements, cursors, currentPageId, isLoading, sendElement, sendCursor, deleteElement,
@@ -30,7 +31,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     nickname,
     (newElement) => { addElementToCanvasRef.current?.(newElement); },
     (elementId) => { assignElementIdRef.current?.(elementId); },
-    (elementId) => { removeElementFromCanvas(elementId); } 
+    (elementId) => { removeElementFromCanvasRef.current?.(elementId); }
   );
 
   const handleElementAdded = useCallback((fabricObj: any, backendType: string) => {
@@ -68,6 +69,10 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   useEffect(() => {
     assignElementIdRef.current = assignElementId;
   }, [assignElementId]);
+
+  useEffect(() => {
+    removeElementFromCanvasRef.current = removeElementFromCanvas;
+  }, [removeElementFromCanvas]);
 
   const elementsRef = useRef(elements);
   useEffect(() => { elementsRef.current = elements; }, [elements]);
