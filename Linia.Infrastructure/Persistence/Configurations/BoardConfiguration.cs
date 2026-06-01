@@ -11,7 +11,7 @@ namespace Linia.Infrastructure.Persistence.Configurations
             builder.HasKey(b => b.Id);
             builder.Property(b => b.Name).IsRequired().HasMaxLength(200);
             builder.Property(b => b.OwnerNickname).IsRequired().HasMaxLength(50);
-            builder.Property(b => b.ThumbnailUrl).HasMaxLength(500);
+            builder.Property(b => b.ThumbnailUrl).HasColumnType("text");
 
             builder.HasMany(b => b.Pages)
                 .WithOne()
