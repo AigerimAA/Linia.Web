@@ -51,8 +51,10 @@ export const useSignalR = (
             .build();
 
           connection.on('ReceiveElement', (element: any) => {
-            setElements(prev => prev.some(e => e.id === element.id) ? prev : [...prev, element]);
-            onNewElementRef.current?.(element);
+              setElements(prev => prev.some(e => e.id === element.id) ? prev : [...prev, element]);
+              if (element.authorNickname !== nickname) {
+                  onNewElementRef.current?.(element);
+              }
           });
           connection.on('ReceiveElementDeleted', (id: string) => {
             setElements(prev => prev.filter(e => e.id !== id));

@@ -13,6 +13,7 @@ export const useCanvas = (
   const onElementDeletedRef = useRef(onElementDeleted);
   const elementIdMap = useRef<WeakMap<object, string>>(new WeakMap());
   const lastDrawnObjRef = useRef<any>(null);
+  const pendingElementsRef = useRef<any[]>([]);
 
   const [selectedTool, setSelectedTool] = useState<string>('pen');
   const [selectedColor, setSelectedColor] = useState<string>('#000000');
@@ -97,10 +98,11 @@ export const useCanvas = (
 
       const handleObjectCreation = (obj: any) => {
         obj.set({ selectable: false, evented: false, hoverCursor: 'default', hasControls: false, hasBorders: false });
+        pendingElementsRef.current.push(obj);
         lastDrawnObjRef.current = obj;
         const backendType = getBackendType(obj.type);
         onElementAddedRef.current(obj, backendType);
-      };
+    };
 
       canvas.on('path:created', (opt: any) => {
         if (!opt.path) return;
@@ -278,11 +280,11 @@ export const useCanvas = (
   }, []);
 
   const assignElementId = useCallback((elementId: string) => {
-    if (lastDrawnObjRef.current) {
-      elementIdMap.current.set(lastDrawnObjRef.current, elementId);
-      lastDrawnObjRef.current = null;
+    const obj = pendingElementsRef.current.shift();
+    if (obj) {
+        elementIdMap.current.set(obj, elementId);
     }
-  }, []);
+}, []);
 
   const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
