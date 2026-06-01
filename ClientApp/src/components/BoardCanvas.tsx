@@ -48,6 +48,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
     clearCanvas,
     exportToJPEG,
     assignElementId,
+    isCanvasReady,
   } = useCanvas(handleElementAdded, deleteElement, false);
 
   useEffect(() => {
@@ -67,12 +68,12 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
   }, [assignElementId]);
 
   useEffect(() => {
-    if (elements.length === 0) return;
+    if (elements.length === 0 || !isCanvasReady) return;
     const timer = setTimeout(() => {
       loadInitialElements(elements);
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [elements, loadInitialElements]);
+  }, [elements, isCanvasReady, loadInitialElements]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

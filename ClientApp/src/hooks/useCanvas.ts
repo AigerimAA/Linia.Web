@@ -18,6 +18,7 @@ export const useCanvas = (
   const [selectedColor, setSelectedColor] = useState<string>('#000000');
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
+  const [isCanvasReady, setIsCanvasReady] = useState<boolean>(false);
 
   const toolRef = useRef<string>('pen');
   const colorRef = useRef<string>('#000000');
@@ -72,6 +73,7 @@ export const useCanvas = (
       });
 
       canvasRef.current = canvas;
+      setIsCanvasReady(true);
 
       const brush = new fabric.PencilBrush(canvas);
       brush.width = strokeRef.current;
@@ -355,5 +357,6 @@ export const useCanvas = (
     loadInitialElements, addElementToCanvas,
     clearCanvas, exportToJPEG,
     assignElementId,
+    isCanvasReady,
   };
 };
