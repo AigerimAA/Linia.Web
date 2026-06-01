@@ -63,6 +63,7 @@ export const useSignalR = (
               setElements(prev => prev.filter(e => e.id !== elementId));
               onElementRemovedRef.current?.(elementId);
           });
+          
           connection.on('ReceiveBoardCleared', () => setElements([]));
           connection.on('ReceiveCursor', (cursor: Cursor) => {
             setCursors(prev => [...prev.filter(c => c.nickname !== cursor.nickname), cursor]);
