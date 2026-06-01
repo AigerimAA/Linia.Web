@@ -287,12 +287,12 @@ export const useCanvas = (
   const loadInitialElements = useCallback((elements: any[]) => {
     if (!canvasRef.current) return;
 
-    const existingObjects = [...canvasRef.current.getObjects()];
-    existingObjects.forEach((obj: any) => canvasRef.current.remove(obj));
-    canvasRef.current.backgroundColor = '#ffffff';
-
     elements.forEach(el => {
       try {
+        const alreadyExists = canvasRef.current.getObjects()
+          .some((o: any) => elementIdMap.current.get(o) === el.id);
+        if (alreadyExists) return;
+
         let parsed = typeof el.jsonData === 'string'
           ? JSON.parse(el.jsonData)
           : el.jsonData;
