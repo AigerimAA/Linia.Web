@@ -49,7 +49,7 @@ namespace Linia.Web
             });
 
             builder.Services.AddApplication();
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? Environment.GetEnvironmentVariable("DATABASE_URL");
             builder.Services.AddInfrastructure(connectionString!, builder.Environment.IsDevelopment());
 
             var app = builder.Build();
