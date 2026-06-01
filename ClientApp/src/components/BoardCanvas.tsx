@@ -72,7 +72,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
       loadInitialElements(elements);
     }, 500);
     return () => clearTimeout(timer);
-  }, [elements.length, loadInitialElements]);
+  }, [elements, loadInitialElements]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
