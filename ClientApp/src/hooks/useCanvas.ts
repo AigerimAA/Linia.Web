@@ -57,7 +57,7 @@ export const useCanvas = (
     const tryInit = () => {
       const canvasElement = document.getElementById('drawing-canvas');
       if (!canvasElement) {
-        if (++attempts < 10) setTimeout(tryInit, 100);
+        if (++attempts < 20) setTimeout(tryInit, 200);
         return;
       }
 
